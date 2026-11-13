@@ -29,6 +29,10 @@ export function createParentsController({
   let parentViewMode = 'order'; // 'order' | 'mode'
   let selectedProfileId = 'grade3';
   let selectedGameId = 'factors-and-multiples';
+  let backupDrawerMode = null; // null | 'export' | 'import'
+  let backupExportValue = '';
+  let backupStatusMsg = '';
+  let backupStatusIsError = false;
 
   function getProfileGames(profileId) {
     const owned = games.filter(g => g.assignedProfileId === profileId);
@@ -390,6 +394,11 @@ export function createParentsController({
 
       <div class="parent-section-card">
         <h3 class="parent-section-title">💾 Family Backup &amp; Reset</h3>
+        ${backupStatusMsg ? `
+          <div class="backup-status-banner ${backupStatusIsError ? 'err' : 'ok'}" style="margin-bottom:12px;">
+            ${escapeHtml(backupStatusMsg)}
+          </div>
+        ` : ''}
         <div class="parents-footer-actions">
           <div style="display:flex; gap:10px; flex-wrap:wrap;">
             <button type="button" class="secondary-action-btn" style="font-size:0.84rem; padding:9px 13px;" data-action="parent-download-json">⬇️ Download Backup (.json)</button>
@@ -397,13 +406,33 @@ export function createParentsController({
               ⬆️ Upload Backup (.json)
               <input id="parent-backup-file-input" type="file" accept=".json,application/json" style="display:none;" />
             </label>
-            <button type="button" class="secondary-action-btn" style="font-size:0.84rem; padding:9px 13px;" data-action="parent-export-code">📋 Copy Backup Code</button>
-            <button type="button" class="secondary-action-btn" style="font-size:0.84rem; padding:9px 13px;" data-action="parent-import-code">📥 Restore Backup Code</button>
+            <button type="button" class="secondary-action-btn" style="font-size:0.84rem; padding:9px 13px;" data-action="parent-export-code">📋 Show / Copy Backup Code</button>
+            <button type="button" class="secondary-action-btn" style="font-size:0.84rem; padding:9px 13px;" data-action="parent-import-code">📥 Paste &amp; Restore Code</button>
           </div>
           <button type="button" class="secondary-action-btn" style="font-size:0.84rem; padding:9px 13px; color:var(--ember-600);" data-action="parent-reset-game">
             🗑️ Reset ${escapeHtml(activeProfile.name)}’s ${escapeHtml(gameDef.title)}
           </button>
         </div>
+        ${backupDrawerMode === 'export' ? `
+          <div class="backup-code-drawer">
+            <div style="font-size:0.85rem; font-weight:800; color:var(--ink-700);">Full Family Backup Code (no character limit — safe to copy):</div>
+            <textarea id="parent-backup-textarea" class="backup-code-textarea" readonly aria-label="Exported Backup Code">${escapeHtml(backupExportValue)}</textarea>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button type="button" class="primary-action-btn" style="font-size:0.84rem; padding:8px 14px;" data-action="parent-select-copy-code">📋 Select &amp; Copy</button>
+              <button type="button" class="secondary-action-btn" style="font-size:0.84rem; padding:8px 14px;" data-action="parent-close-backup-drawer">Close</button>
+            </div>
+          </div>
+        ` : ''}
+        ${backupDrawerMode === 'import' ? `
+          <div class="backup-code-drawer">
+            <div style="font-size:0.85rem; font-weight:800; color:var(--ink-700);">Paste a Family Backup Code, raw JSON, or legacy Wings of Math backup code below:</div>
+            <textarea id="parent-backup-textarea" class="backup-code-textarea" placeholder="Paste full backup code here (eyJ...)" aria-label="Paste Backup Code"></textarea>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button type="button" class="primary-action-btn" style="font-size:0.84rem; padding:8px 14px;" data-action="parent-confirm-import-code">✅ Restore Progress Now</button>
+              <button type="button" class="secondary-action-btn" style="font-size:0.84rem; padding:8px 14px;" data-action="parent-close-backup-drawer">Cancel</button>
+            </div>
+          </div>
+        ` : ''}
       </div>
     `;
   }
@@ -583,36 +612,100 @@ export function createParentsController({
       }
       case 'parent-export-code': {
         if (!parentUnlocked) return true;
+        SFX.tap();
+        backupExportValue = encodeBackupCode(family);
+        backupDrawerMode = 'export';
+        backupStatusIsError = false;
+        backupStatusMsg = 'Full backup code generated below.';
+        if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(backupExportValue).then(() => {
+            backupStatusMsg = '✅ Full backup code copied to clipboard!';
+            rerenderFn();
+          }).catch(() => {});
+        }
+        rerenderFn();
+        const ta = document.getElementById('parent-backup-textarea');
+        if (ta && ta.select) ta.select();
+        return true;
+      }
+      case 'parent-select-copy-code': {
+        if (!parentUnlocked) return true;
+        SFX.tap();
+        const ta = document.getElementById('parent-backup-textarea');
+        if (ta && ta.select) {
+          ta.focus();
+          ta.select();
+        }
         try {
-          const code = encodeBackupCode(family);
-          if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(code)
-              .then(() => alert('Family backup code copied to clipboard!'))
-              .catch(() => prompt('Copy this backup code:', code));
-          } else {
-            prompt('Copy this backup code:', code);
+          if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(backupExportValue);
+          } else if (typeof document !== 'undefined' && document.execCommand) {
+            document.execCommand('copy');
           }
+          backupStatusIsError = false;
+          backupStatusMsg = '✅ Backup code selected & copied!';
+          rerenderFn();
         } catch (_) {}
         return true;
       }
       case 'parent-import-code': {
         if (!parentUnlocked) return true;
-        const code = prompt('Paste a Family Math Arcade backup code (or legacy Wings of Math backup code):');
-        if (!code) return true;
+        SFX.tap();
+        backupDrawerMode = 'import';
+        backupStatusMsg = '';
+        backupStatusIsError = false;
+        rerenderFn();
+        const ta = document.getElementById('parent-backup-textarea');
+        if (ta && ta.focus) ta.focus();
+        return true;
+      }
+      case 'parent-close-backup-drawer': {
+        if (!parentUnlocked) return true;
+        SFX.tap();
+        backupDrawerMode = null;
+        rerenderFn();
+        return true;
+      }
+      case 'parent-confirm-import-code': {
+        if (!parentUnlocked) return true;
+        const ta = document.getElementById('parent-backup-textarea');
+        const code = ta ? ta.value.trim() : '';
+        if (!code) {
+          SFX.oops();
+          backupStatusIsError = true;
+          backupStatusMsg = 'Please paste a backup code into the box first.';
+          rerenderFn();
+          return true;
+        }
         try {
           const res = importBackupPayload(code, family, games, 'grade3');
           if (res.ok) {
+            SFX.correct(true);
             setFamilyState(res.familyState);
+            if (res.kind === 'legacy-factors') {
+              selectedProfileId = 'grade3';
+              selectedGameId = 'factors-and-multiples';
+            }
+            backupDrawerMode = null;
+            backupStatusIsError = false;
+            backupStatusMsg = res.kind === 'legacy-factors'
+              ? (res.recoveredTruncated
+                  ? '✅ Restored 3rd Grader’s Factors & Multiples progress (automatically recovered from browser-truncated legacy code)!'
+                  : '✅ Legacy Wings of Math progress restored into Factors & Multiples!')
+              : '✅ Full Family Math Arcade backup restored!';
             onSave();
             rerenderFn();
-            alert(res.kind === 'legacy-factors'
-              ? 'Legacy Wings of Math progress restored into Factors & Multiples!'
-              : 'Family progress restored!');
           } else {
-            alert('Oops — that backup code did not look valid.');
+            SFX.oops();
+            backupStatusIsError = true;
+            backupStatusMsg = 'Oops — that backup code did not look valid.';
+            rerenderFn();
           }
         } catch (_) {
-          alert('Oops — that backup code did not look valid.');
+          SFX.oops();
+          backupStatusIsError = true;
+          backupStatusMsg = 'Oops — could not decode that backup code.';
+          rerenderFn();
         }
         return true;
       }
@@ -674,6 +767,8 @@ export function createParentsController({
     lock() {
       parentUnlocked = false;
       parentPinError = '';
+      backupDrawerMode = null;
+      backupStatusMsg = '';
     },
     handleAction,
     handleInputEvent,

@@ -263,22 +263,181 @@ export function encodeBackupCode(obj) {
   return btoa(utf8Binary);
 }
 
-export function decodeBackupCode(code) {
-  const bin = atob(String(code || '').trim());
-  let pct = '';
-  for (let i = 0; i < bin.length; i++) {
-    const hex = bin.charCodeAt(i).toString(16).toUpperCase().padStart(2, '0');
-    pct += '%' + hex;
+function decodeBytesToUtf8(bytes) {
+  if (typeof TextDecoder !== 'undefined') {
+    return new TextDecoder('utf-8', { fatal: false }).decode(bytes);
   }
-  return JSON.parse(decodeURIComponent(pct));
+  let out = '';
+  for (let i = 0; i < bytes.length; i++) {
+    out += String.fromCharCode(bytes[i]);
+  }
+  return out;
+}
+
+export function decodeBackupCode(code) {
+  const clean = String(code || '').replace(/\s+/g, '');
+  const bin = atob(clean);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) {
+    bytes[i] = bin.charCodeAt(i);
+  }
+  return JSON.parse(decodeBytesToUtf8(bytes));
+}
+
+/**
+ * Recovers legacy `wings_of_math_save_v1` Base64 backup codes that were elided in the
+ * middle with `...` by Chromium's 2,000-character `window.prompt()` limit in the old single-file app.
+ */
+export function recoverTruncatedLegacyBackup(rawCode) {
+  const clean = String(rawCode || '').trim();
+  const parts = clean.split(/\.{3,}|…/);
+  if (parts.length !== 2) return null;
+
+  const leftB64 = parts[0].replace(/\s+/g, '');
+  const rightB64 = parts[1].replace(/\s+/g, '');
+  if (!leftB64 || !rightB64) return null;
+
+  // 1. Decode intact Base64 prefix (aligned to 4-char Base64 groups)
+  const leftAligned = leftB64.slice(0, leftB64.length - (leftB64.length % 4));
+  let leftText = '';
+  try {
+    const bin = atob(leftAligned);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    leftText = decodeBytesToUtf8(bytes);
+  } catch (_) {
+    return null;
+  }
+
+  // Extract any complete per-mode objects inside "modeStats":{...}
+  const recoveredModeStats = {};
+  const modeStatsIdx = leftText.indexOf(',"modeStats":');
+  if (modeStatsIdx >= 0) {
+    const statsTail = leftText.slice(modeStatsIdx + ',"modeStats":'.length);
+    const entryRe = /"([a-z0-9_]+)"\s*:\s*(\{[^{}]*\})/gi;
+    let match;
+    while ((match = entryRe.exec(statsTail)) !== null) {
+      try {
+        const parsedStat = JSON.parse(match[2]);
+        if (parsedStat && typeof parsedStat.rounds === 'number') {
+          recoveredModeStats[match[1]] = parsedStat;
+        }
+      } catch (_) {}
+    }
+  }
+
+  // Parse all intact top-level fields from the prefix
+  let prefixCandidate = modeStatsIdx >= 0 ? leftText.slice(0, modeStatsIdx) : leftText;
+  let recoveredObj = null;
+  if (modeStatsIdx >= 0) {
+    try {
+      recoveredObj = JSON.parse(prefixCandidate + '}');
+    } catch (_) {}
+  }
+  if (!recoveredObj) {
+    // Walk prefix tracking nesting depth and cut at the last depth-1 comma
+    let depth = 0;
+    let inStr = false;
+    let esc = false;
+    let lastComma = -1;
+    for (let i = 0; i < prefixCandidate.length; i++) {
+      const ch = prefixCandidate[i];
+      if (inStr) {
+        if (esc) esc = false;
+        else if (ch === '\\') esc = true;
+        else if (ch === '"') inStr = false;
+      } else if (ch === '"') {
+        inStr = true;
+      } else if (ch === '{' || ch === '[') {
+        depth++;
+      } else if (ch === '}' || ch === ']') {
+        depth--;
+      } else if (ch === ',' && depth === 1) {
+        lastComma = i;
+      }
+    }
+    if (lastComma > 0) {
+      try {
+        recoveredObj = JSON.parse(prefixCandidate.slice(0, lastComma) + '}');
+      } catch (_) {}
+    }
+  }
+  if (!recoveredObj || typeof recoveredObj.stars !== 'number') return null;
+
+  // 2. Decode intact Base64 suffix across possible 0..3 Base64 alignment offsets
+  let rightText = '';
+  for (let offset = 0; offset < 4; offset++) {
+    const sub = rightB64.slice(offset);
+    if (sub.length < 4) continue;
+    const padded = sub + '='.repeat((4 - (sub.length % 4)) % 4);
+    try {
+      const bin = atob(padded);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      const cand = decodeBytesToUtf8(bytes).trim();
+      if (cand.endsWith('}')) {
+        rightText = cand;
+        break;
+      }
+    } catch (_) {}
+  }
+
+  if (rightText) {
+    const legMatch = rightText.match(/"v1LegacyStars"\s*:\s*(\d+)/);
+    if (legMatch) {
+      recoveredObj.v1LegacyStars = Number(legMatch[1]);
+    }
+    const recoveredMistakes = [];
+    const mistakeRe = /\{\s*"ts"\s*:\s*\d+[^{}]*\}/g;
+    let mMatch;
+    while ((mMatch = mistakeRe.exec(rightText)) !== null) {
+      try {
+        recoveredMistakes.push(JSON.parse(mMatch[0]));
+      } catch (_) {}
+    }
+    if (recoveredMistakes.length > 0 && !Array.isArray(recoveredObj.recentMistakes)) {
+      recoveredObj.recentMistakes = recoveredMistakes;
+    }
+  }
+
+  // 3. Reconstruct missing modeStats entries from intact modeStarsEarned
+  if (recoveredObj.modeStarsEarned && typeof recoveredObj.modeStarsEarned === 'object') {
+    for (const [m, rawEarned] of Object.entries(recoveredObj.modeStarsEarned)) {
+      if (recoveredModeStats[m]) continue;
+      const earned = Number(rawEarned) || 0;
+      if (earned <= 0) {
+        recoveredModeStats[m] = { rounds: 0, bestFirstTry: 0, totalFirstTry: 0, totalQuestions: 0, lastPlayedAt: 0 };
+        continue;
+      }
+      const maxPerRound = m === 'mix' ? 6 : 5;
+      const minRounds = Math.ceil(earned / maxPerRound);
+      const maxRounds = Math.max(minRounds, Math.floor(earned / 3));
+      const rounds = Math.max(minRounds, Math.min(maxRounds, Math.round(earned / 4)));
+      const avgStars = earned / rounds;
+      const avgFirstTry = avgStars <= 3.05 ? 7 : Math.min(10, 7 + (avgStars - 3) * 1.5);
+      const totalQuestions = rounds * 10;
+      const totalFirstTry = Math.min(totalQuestions, Math.round(rounds * avgFirstTry));
+      const bestFirstTry = avgStars >= 4.8 ? 10 : (avgStars >= 3.9 ? 9 : (avgStars > 3.05 ? 8 : 7));
+      recoveredModeStats[m] = { rounds, bestFirstTry, totalFirstTry, totalQuestions, lastPlayedAt: 0 };
+    }
+  }
+  if (Object.keys(recoveredModeStats).length > 0) {
+    recoveredObj.modeStats = Object.assign({}, recoveredModeStats, recoveredObj.modeStats || {});
+  }
+
+  return recoveredObj;
 }
 
 export function importBackupPayload(rawInput, currentFamilyState, gamesList, targetProfileId = 'grade3') {
   let decoded = rawInput;
+  let recoveredTruncated = false;
   if (typeof rawInput === 'string') {
     const trimmed = rawInput.trim();
     if (trimmed.startsWith('{')) {
       decoded = JSON.parse(trimmed);
+    } else if (/\.{3,}|…/.test(trimmed)) {
+      decoded = recoverTruncatedLegacyBackup(trimmed);
+      recoveredTruncated = Boolean(decoded);
     } else {
       decoded = decodeBackupCode(trimmed);
     }
@@ -308,6 +467,7 @@ export function importBackupPayload(rawInput, currentFamilyState, gamesList, tar
     return {
       ok: true,
       kind: 'legacy-factors',
+      recoveredTruncated,
       profileId: profId,
       familyState: nextFamily
     };

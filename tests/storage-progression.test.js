@@ -195,3 +195,32 @@ test('Backup export/import supports both new family backup codes and legacy wing
   assert.equal(g3Factors.modeBank.factors, 9);
   assert.equal(legacyRes.familyState.profiles[1].name, 'Mia');
 });
+
+test('Recovers Chrome prompt()-truncated 2000-char legacy backup codes cleanly', () => {
+  const truncatedUserCode =
+    'eyJzdGFycyI6MzE3LCJhY3RpdmVCdWRkeUlkIjoiNDNfZGFya3N0YWxrZXIiLCJzb3VuZE9uIjp0cnVlLCJwYWNlIjoicmVsYXhlZCIsInRvdGFsU29sdmVkIjo3NzAsInVubG9ja2VkRHJhZ29ucyI6WyIwMV9jbGF5IiwiMDRfc3RhcmZsaWdodCIsIjE1X3Nub3dmYWxsIiwiMjNfd2lsbG93IiwiMjZfY2xlYXJzaWdodCIsIjM0X2phbWJ1IiwiMDhfcGVyaWwiLCIxM19jcmlja2V0IiwiMjBfZmF0ZXNwZWFrZXIiLCIyNF93aGl0ZW91dCIsIjMzX2x5bngiLCI0Ml9waW5lYXBwbGUiLCIxMV9raW5rYWpvdSIsIjQwX3NvcmEiLCIwNV9zdW5ueSIsIjA3X3dpbnRlciIsIjE4X2FuZW1vbmUiLCIyNV9wZWFjZW1ha2VyIiwiMjlfc2t5IiwiNDNfZGFya3N0YWxrZXIiXSwibW9kZUJhbmsiOnsibWl4IjowLCJsZWZ0b3ZlcnMiOjAsImZhY3RvcnMiOjAsIm11bHRpcGxlcyI6MSwicHJpbWVzIjowLCJnY2ZsY20iOjMsIm15c3RlcnkiOjN9LCJtb2RlU3RhcnNFYXJuZWQiOnsibWl4Ijo2NCwibGVmdG92ZXJzIjowLCJmYWN0b3JzIjo2MCwibXVsdGlwbGVzIjoxMSwicHJpbWVzIjoxNzIsImdjZmxjbSI6MywibXlzdGVyeSI6M30sIm1vZGVTdGF0cyI6eyJtaXgiOnsicm91bmRzIjoxNCwiYmVzdEZpcnN0VHJ5IjoxMCwidG90YWxGaXJzdFRyeSI6MTEwLCJ0b3RhbFF1ZXN0aW9ucyI6MTQwLCJsYXN0UGxheWVkQXQiOjE3OTQ1MzU5OTc3MDZ9LCJsZWZ0b3ZlcnMiOnsicm91bmRzIjowLCJiZXN0Rmlyc3RUcnkiOjAsInRvdGFsRml...wic2tpbGxMYWJlbCI6IkdDRiAmIExDTSBXb3JkIFByb2JsZW1zIiwicHJvbXB0VGV4dCI6IkNyaWNrZXQgY2hlY2tzIGhlciBwbGFudCBleHBlcmltZW50IGV2ZXJ5IDMgZGF5cywgYW5kIFN1bmRldyBjaGVja3MgaGVycyBldmVyeSA1IGRheXMuIEluIGhvdyBtYW55IGRheXMgd2lsbCB0aGV5IGNoZWNrIHRoZWlyIHBsYW50cyBvbiB0aGUgU0FNRSBkYXkgYWdhaW4/IiwiY29ycmVjdFRleHQiOiIxNSJ9LHsidHMiOjE3OTQ1MjM4MjM3ODAsIm1vZGVJZCI6ImdjZmxjbSIsImRvbWFpbklkIjoiZ2NmbGNtIiwic2tpbGxMYWJlbCI6IkdyZWF0ZXN0IENvbW1vbiBGYWN0b3IgKEdDRikiLCJwcm9tcHRUZXh0IjoiRmluZCB0aGUgR3JlYXRlc3QgQ29tbW9uIEZhY3RvciAoR0NGKSBvZiA1NCBhbmQgODE6IiwiY29ycmVjdFRleHQiOiIyNyJ9LHsidHMiOjE3OTQ1MjM3NTU4MjEsIm1vZGVJZCI6ImdjZmxjbSIsImRvbWFpbklkIjoiZ2NmbGNtIiwic2tpbGxMYWJlbCI6IkdDRiAmIExDTSBXb3JkIFByb2JsZW1zIiwicHJvbXB0VGV4dCI6IlN0YXJmbGlnaHQgaGFzIDI4IGhpc3Rvcnkgc2Nyb2xscyBhbmQgNDIgbWFwIHNjcm9sbHMgdG8gcGxhY2UgZXF1YWxseSBvbnRvIGxpYnJhcnkgc2hlbHZlcyB3aXRoIG5vbmUgbGVmdCBvdmVyLiBXaGF0IGlzIHRoZSBHUkVBVEVTVCBudW1iZXIgb2Ygc2hlbHZlcyBoZSBjYW4gZmlsbCBpZGVudGljYWxseT8iLCJjb3JyZWN0VGV4dCI6IjE0In1dLCJ2MUxlZ2FjeVN0YXJzIjoyMzJ9';
+
+  const family = createDefaultFamilyState(GAMES);
+  const res = importBackupPayload(truncatedUserCode, family, GAMES, 'grade3');
+  assert.equal(res.ok, true);
+  assert.equal(res.kind, 'legacy-factors');
+  assert.equal(res.recoveredTruncated, true);
+
+  const g3 = getGameSave(res.familyState, 'grade3', FACTORS_AND_MULTIPLES_GAME);
+  assert.equal(g3.stars, 317);
+  assert.equal(g3.totalSolved, 770);
+  assert.equal(g3.activeBuddyId, '43_darkstalker');
+  assert.equal(g3.pace, 'relaxed');
+  assert.equal(g3.unlockedDragons.length, 20);
+  assert.equal(g3.v1LegacyStars, 232);
+  assert.equal(g3.modeBank.multiples, 1);
+  assert.equal(g3.modeBank.gcflcm, 3);
+  assert.equal(g3.modeBank.mystery, 3);
+  assert.equal(g3.modeStats.mix.rounds, 14);
+  assert.equal(g3.modeStats.factors.rounds, 15);
+  assert.equal(g3.modeStats.primes.rounds, 43);
+  assert.equal(g3.modeStats.multiples.rounds, 3);
+  assert.equal(g3.modeStats.gcflcm.rounds, 1);
+  assert.equal(g3.modeStats.mystery.rounds, 1);
+  assert.equal(g3.recentMistakes.length, 2);
+});
