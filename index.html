@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Family Math Arcade</title>
+  <meta name="description" content="Zero-build interactive math games for elementary learners: Factors & Multiples (3rd Grade) and Addition & Subtraction (1st Grade) with collectible buddies." />
+  <link rel="stylesheet" href="./css/tokens.css" />
+  <link rel="stylesheet" href="./css/base.css" />
+  <link rel="stylesheet" href="./css/arcade.css" />
+  <link rel="stylesheet" href="./css/game-shell.css" />
+  <link rel="stylesheet" href="./css/arena.css" />
+  <link rel="stylesheet" href="./css/parents.css" />
+</head>
+<body data-theme="parchment">
+
+  <!-- ================= MAIN SHELL (Arcade / Game Hub / Sanctuary / Guide / Parents) ================= -->
+  <div id="shell-main" class="app-shell"></div>
+
+  <!-- ================= XTRAMATH GAMEPLAY ARENA ================= -->
+  <div id="arena-screen" class="arena-screen hidden">
+    <div class="arena-topbar">
+      <button type="button" id="btn-arena-exit" class="arena-back-btn" data-action="exit-arena">← Quit</button>
+      <div id="progress-gems" class="progress-gems-row" aria-label="Puzzle Progress"></div>
+      <div class="arena-controls">
+        <button type="button" id="btn-pace-toggle" class="pace-btn" data-action="toggle-pace">⚡ Brisk</button>
+        <button type="button" id="btn-sound-arena" class="arena-back-btn" data-action="toggle-sound">🔊</button>
+      </div>
+    </div>
+
+    <div id="fluency-bar-wrap" class="fluency-bar-wrap">
+      <div id="fluency-bar-fill" class="fluency-bar-fill"></div>
+    </div>
+
+    <div class="arena-main">
+      <!-- LEFT: QUESTION & COACH -->
+      <div class="question-panel">
+        <div class="coach-bubble-bar">
+          <div class="coach-mini-avatar">
+            <img id="arena-coach-img" src="" alt="Study Buddy" />
+          </div>
+          <div id="arena-coach-speech" class="coach-speech">
+            Let's solve 10 puzzles! Take a clear look at the numbers.
+          </div>
+        </div>
+
+        <div id="question-stage" class="question-stage"></div>
+
+        <div id="learning-feedback" class="learning-feedback hidden"></div>
+      </div>
+
+      <!-- RIGHT: ADAPTIVE INPUT PAD -->
+      <div id="input-panel" class="input-panel"></div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: ROUND RESULTS ================= -->
+  <div id="modal-results" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div style="font-size:0.85rem; font-weight:800; color:var(--jade-700); text-transform:uppercase; letter-spacing:0.05em;">10-Puzzle Series Complete!</div>
+      <h2 id="results-headline" style="margin:6px 0 4px; font-size:1.65rem;">Awesome Work!</h2>
+      <div id="results-stars-row" class="stars-earned-row">⭐⭐⭐</div>
+      <div id="results-breakdown" class="breakdown-list"></div>
+      <div style="margin-bottom:18px;">
+        <div class="progress-track">
+          <div id="results-progress-fill" class="progress-fill" style="width:0%"></div>
+        </div>
+        <div id="results-progress-caption" class="next-unlock-caption"></div>
+      </div>
+      <div id="results-suggest-wrap"></div>
+      <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+        <button type="button" class="secondary-action-btn" data-action="close-results">🏠 Academy Hub</button>
+        <button type="button" class="primary-action-btn" data-action="replay-same-mode">🔄 Play Another 10 →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: COMPANION UNLOCK CELEBRATION ================= -->
+  <div id="modal-unlock" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div id="unlock-egg-step" class="egg-stage" data-action="crack-egg" role="button" tabindex="0">
+        <div style="font-size:0.9rem; font-weight:900; color:var(--gold-600); text-transform:uppercase; letter-spacing:0.06em;">🌟 10-Star Milestone Reached! 🌟</div>
+        <h2 id="unlock-heading" style="margin:8px 0 4px; font-size:1.65rem;">A Dragon Egg Is Hatching!</h2>
+        <span id="egg-tribe-hint" class="tribe-pill">Egg</span>
+        <div id="unlock-pod-emoji" class="dragon-egg-btn" aria-label="Tap to unlock friend">✨</div>
+        <p style="margin:0; font-size:1rem; font-weight:800; color:var(--jade-700);">👆 Tap the glowing egg to hatch your new friend!</p>
+      </div>
+
+      <div id="unlock-reveal-step" class="hidden">
+        <div id="unlock-reveal-kicker" style="font-size:0.88rem; font-weight:900; color:var(--gold-600); text-transform:uppercase; letter-spacing:0.06em;">✨ New Friend Hatched! ✨</div>
+        <h2 id="unlock-dragon-name" style="margin:6px 0 2px; font-size:1.85rem;">Friend</h2>
+        <span id="unlock-dragon-tribe" class="tribe-pill">Group</span>
+        <div class="hatch-portrait-hero">
+          <img id="unlock-dragon-img" src="" alt="Newly Unlocked Companion" />
+        </div>
+        <p id="unlock-dragon-bio" style="font-size:0.96rem; color:var(--ink-700); font-weight:600; margin:0 0 8px;"></p>
+        <p id="unlock-dragon-quote" style="font-size:0.9rem; color:var(--jade-700); font-style:italic; font-weight:700; margin:0 0 18px;"></p>
+        <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+          <button type="button" class="secondary-action-btn" data-action="close-unlock-modal" data-make-buddy="false">Keep Current Buddy</button>
+          <button type="button" id="btn-unlock-make-buddy" class="primary-action-btn" data-action="close-unlock-modal" data-make-buddy="true">🐉 Make My Study Buddy!</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="confetti-layer" class="confetti-container"></div>
+
+  <!-- ================= MODAL: COMPANION DETAIL CARD ================= -->
+  <div id="modal-dragon-detail" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <span id="detail-dragon-tribe" class="tribe-pill">Group</span>
+      <h2 id="detail-dragon-name" style="margin:8px 0 4px; font-size:1.75rem;">Companion</h2>
+      <div class="hatch-portrait-hero">
+        <img id="detail-dragon-img" src="" alt="Companion Portrait" />
+      </div>
+      <p id="detail-dragon-bio" style="font-size:0.96rem; color:var(--ink-700); font-weight:600; margin:0 0 8px;"></p>
+      <p id="detail-dragon-quote" style="font-size:0.9rem; color:var(--jade-700); font-style:italic; font-weight:700; margin:0 0 18px;"></p>
+      <div style="display:flex; gap:10px; justify-content:center;">
+        <button type="button" class="secondary-action-btn" data-action="close-detail-modal">Close</button>
+        <button type="button" id="detail-select-btn" class="primary-action-btn" data-action="select-detail-buddy">🐉 Set as Study Buddy</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
