@@ -178,6 +178,13 @@
   display: block;
 }
 
+.arcade-game-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
 .arcade-game-title-wrap h3 {
   margin: 4px 0 2px;
   font-size: 1.28rem;

@@ -48,7 +48,10 @@ export function renderArcadeView({ container, familyState, games, deviceSettings
             <img src="${escapeHtml(buddy.image)}" alt="${escapeHtml(buddy.name)}" />
           </div>
           <div class="arcade-game-title-wrap">
-            <span class="tribe-pill">${escapeHtml(game.gradeLabel)}</span>
+            <div class="arcade-game-badges">
+              <span class="tribe-pill">${escapeHtml(game.gradeLabel)}</span>
+              ${game.authorCredit ? `<span class="author-credit-pill">✨ ${escapeHtml(game.authorCredit)}</span>` : ''}
+            </div>
             <h3>${escapeHtml(game.title)}</h3>
             <p>${game.companionEmoji} Buddy: ${escapeHtml(buddy.name)}</p>
           </div>

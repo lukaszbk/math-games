@@ -389,7 +389,10 @@ export function createParentsController({
       return `
         <div class="parent-pack-tile ${enabled ? 'enabled' : 'disabled'}">
           <div class="parent-pack-owner">
-            <span class="tribe-pill">${escapeHtml(g.gradeLabel)}</span>
+            <div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap;">
+              <span class="tribe-pill">${escapeHtml(g.gradeLabel)}</span>
+              ${g.authorCredit ? `<span class="author-credit-pill">✨ ${escapeHtml(g.authorCredit)}</span>` : ''}
+            </div>
             <span class="parent-pack-stat">${packStatText}</span>
           </div>
           <div class="parent-pack-title">${g.companionEmoji} ${escapeHtml(g.title)}</div>

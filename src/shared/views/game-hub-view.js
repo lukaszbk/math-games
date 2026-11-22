@@ -339,6 +339,7 @@ export function renderGameHubShell({ container, gameDef, gameSave, profile, soun
         <div class="buddy-meta">
           <div class="app-brand-row">
             <h1 class="app-title">${escapeHtml(gameDef.title)}</h1>
+            ${gameDef.authorCredit ? `<span class="author-credit-pill">✨ ${escapeHtml(gameDef.authorCredit)}</span>` : ''}
             <span id="header-buddy-badge" class="tribe-pill">${escapeHtml(buddy.name)} • ${escapeHtml(buddy.tribe)}</span>
           </div>
           <p id="header-buddy-quote" class="buddy-quote">"${escapeHtml(buddy.quotes[0])}"</p>

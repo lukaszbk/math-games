@@ -196,6 +196,10 @@ test('renderArcadeView hides disabled game packs and shows empty-state card when
   const family = createDefaultFamilyState(GAMES);
   const container = { innerHTML: '' };
 
+  // Default Arcade view shows Money Match author credit
+  renderArcadeView({ container, familyState: family, games: GAMES });
+  assert.ok(container.innerHTML.includes('By Ada Guzhu'));
+
   // Disable one grade3 game
   const oneDisabled = setGamePackEnabled(createDefaultDeviceSettings(), 'money-match', false, GAMES);
   renderArcadeView({ container, familyState: family, games: GAMES, deviceSettings: oneDisabled });

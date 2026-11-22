@@ -34,6 +34,7 @@ export const MONEY_MATCH_GAME = {
   gradeId: 'grade3',
   assignedProfileId: 'grade3',
   gradeLabel: '3rd Grade',
+  authorCredit: 'By Ada Guzhu',
   theme: 'hoard',
   defaultPace: 'brisk',
   enableReadAloud: true,
