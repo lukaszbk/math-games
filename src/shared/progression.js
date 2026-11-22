@@ -2,6 +2,44 @@ export function getModeCompanions(gameDef, modeId) {
   return (gameDef.companions || []).filter(c => c.modeId === modeId);
 }
 
+export function parseCompanionFactions(tribeStr) {
+  return String(tribeStr || '')
+    .split('•')
+    .map(part => part.trim())
+    .filter(Boolean);
+}
+
+export function getCompanionFactions(gameDef) {
+  if (!gameDef) return [];
+  const result = [];
+  const seen = new Set();
+  const addFaction = (f) => {
+    if (typeof f !== 'string') return;
+    const clean = f.trim();
+    if (!clean || clean === 'All' || clean === 'Unlocked' || seen.has(clean)) return;
+    seen.add(clean);
+    result.push(clean);
+  };
+
+  if (Array.isArray(gameDef.sanctuaryFilters)) {
+    gameDef.sanctuaryFilters.forEach(addFaction);
+  }
+  (gameDef.companions || []).forEach(c => {
+    parseCompanionFactions(c && c.tribe).forEach(addFaction);
+  });
+  return result;
+}
+
+export function matchesCompanionFaction(companion, faction) {
+  if (!faction || faction === 'All') return true;
+  return parseCompanionFactions(companion && companion.tribe).includes(faction);
+}
+
+export function filterCompanionsByFaction(companions, faction) {
+  if (!faction || faction === 'All') return (companions || []).slice();
+  return (companions || []).filter(c => matchesCompanionFaction(c, faction));
+}
+
 export function isCompanionUnlocked(gameSave, id) {
   return Array.isArray(gameSave.unlockedDragons) && gameSave.unlockedDragons.includes(id);
 }

@@ -1,6 +1,7 @@
 import { getModeCompanions } from './progression.js';
 
 export const FAMILY_STORAGE_KEY = 'math_arcade_save_v1';
+export const DEVICE_SETTINGS_KEY = 'math_arcade_device_v1';
 export const LEGACY_WINGS_KEY = 'wings_of_math_save_v1';
 export const PARENT_PIN = '885174';
 export const PROFILE_AVATAR_OPTIONS = ['🐉', '🐶', '🦄', '🦉', '🦊', '🦁', '🐼', '🚀', '🌟'];
@@ -269,6 +270,72 @@ export function saveFamilyState(familyState, storage = getBrowserStorage()) {
   try {
     storage.setItem(FAMILY_STORAGE_KEY, JSON.stringify(familyState));
   } catch (_) {}
+}
+
+export function createDefaultDeviceSettings() {
+  return {
+    version: 1,
+    disabledGameIds: []
+  };
+}
+
+export function normalizeDeviceSettings(raw, gamesList) {
+  const base = createDefaultDeviceSettings();
+  if (!raw || typeof raw !== 'object' || !Array.isArray(raw.disabledGameIds)) {
+    return base;
+  }
+  const validIds = new Set((gamesList || []).map(g => g && g.id).filter(Boolean));
+  const seen = new Set();
+  const disabledGameIds = [];
+  raw.disabledGameIds.forEach(id => {
+    if (typeof id === 'string' && validIds.has(id) && !seen.has(id)) {
+      seen.add(id);
+      disabledGameIds.push(id);
+    }
+  });
+  return {
+    version: 1,
+    disabledGameIds
+  };
+}
+
+export function loadDeviceSettings(gamesList, storage = getBrowserStorage()) {
+  if (!storage) return createDefaultDeviceSettings();
+  try {
+    const raw = storage.getItem(DEVICE_SETTINGS_KEY);
+    if (!raw) return createDefaultDeviceSettings();
+    return normalizeDeviceSettings(JSON.parse(raw), gamesList);
+  } catch (_) {
+    return createDefaultDeviceSettings();
+  }
+}
+
+export function saveDeviceSettings(deviceSettings, storage = getBrowserStorage()) {
+  if (!storage) return;
+  try {
+    storage.setItem(DEVICE_SETTINGS_KEY, JSON.stringify(deviceSettings));
+  } catch (_) {}
+}
+
+export function isGamePackEnabled(deviceSettings, gameId) {
+  return !(deviceSettings && Array.isArray(deviceSettings.disabledGameIds) && deviceSettings.disabledGameIds.includes(gameId));
+}
+
+export function getEnabledGames(gamesList, deviceSettings) {
+  return (gamesList || []).filter(g => isGamePackEnabled(deviceSettings, g.id));
+}
+
+export function setGamePackEnabled(deviceSettings, gameId, enabled, gamesList) {
+  const current = normalizeDeviceSettings(deviceSettings, gamesList);
+  const validIds = new Set((gamesList || []).map(g => g && g.id).filter(Boolean));
+  const nextDisabled = current.disabledGameIds.filter(id => id !== gameId);
+  if (!enabled && typeof gameId === 'string' && validIds.has(gameId)) {
+    nextDisabled.push(gameId);
+  }
+  return {
+    version: 1,
+    disabledGameIds: nextDisabled
+  };
 }
 
 export function getActiveProfile(familyState) {

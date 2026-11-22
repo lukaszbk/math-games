@@ -3,12 +3,19 @@ import { SFX } from '../audio.js';
 import {
   PARENT_PIN,
   PROFILE_AVATAR_OPTIONS,
+  createDefaultDeviceSettings,
   createDefaultGameSave,
   encodeBackupCode,
   getGameSave,
-  importBackupPayload
+  importBackupPayload,
+  isGamePackEnabled,
+  loadDeviceSettings,
+  saveDeviceSettings,
+  setGamePackEnabled
 } from '../storage.js';
 import {
+  filterCompanionsByFaction,
+  getCompanionFactions,
   getModeCompanions,
   getModeMeta,
   getUnlockedCompanions,
@@ -21,18 +28,47 @@ export function createParentsController({
   getFamilyState,
   setFamilyState,
   onSave,
+  getDeviceSettings = null,
+  setDeviceSettings = null,
+  onSaveDeviceSettings = null,
   onStartModeForProfile,
   onBackToGameOrArcade
 }) {
   let parentUnlocked = false;
   let parentPinError = '';
   let parentViewMode = 'order'; // 'order' | 'mode'
+  let parentFactionFilter = 'All';
   let selectedProfileId = 'grade3';
   let selectedGameId = 'factors-and-multiples';
   let backupDrawerMode = null; // null | 'export' | 'import'
   let backupExportValue = '';
   let backupStatusMsg = '';
   let backupStatusIsError = false;
+  let fallbackDeviceSettings = null;
+
+  function readDeviceSettings() {
+    if (typeof getDeviceSettings === 'function') {
+      return getDeviceSettings();
+    }
+    fallbackDeviceSettings = fallbackDeviceSettings || loadDeviceSettings(games);
+    return fallbackDeviceSettings;
+  }
+
+  function writeDeviceSettings(next) {
+    if (typeof setDeviceSettings === 'function') {
+      setDeviceSettings(next);
+    } else {
+      fallbackDeviceSettings = next;
+    }
+  }
+
+  function persistDevice() {
+    if (typeof onSaveDeviceSettings === 'function') {
+      onSaveDeviceSettings();
+    } else {
+      saveDeviceSettings(readDeviceSettings());
+    }
+  }
 
   function getProfileGames(profileId) {
     const owned = games.filter(g => g.assignedProfileId === profileId);
@@ -40,6 +76,7 @@ export function createParentsController({
   }
 
   function syncSelectionDefaults(preferredProfileId, preferredGameId) {
+    const prevGameId = selectedGameId;
     const family = getFamilyState();
     if (preferredProfileId && family.profiles.some(p => p.id === preferredProfileId)) {
       selectedProfileId = preferredProfileId;
@@ -52,6 +89,10 @@ export function createParentsController({
       selectedGameId = preferredGameId;
     } else if (!profileGames.some(g => g.id === selectedGameId)) {
       selectedGameId = profileGames[0].id;
+    }
+
+    if (selectedGameId !== prevGameId) {
+      parentFactionFilter = 'All';
     }
   }
 
@@ -96,6 +137,20 @@ export function createParentsController({
     const gameDef = profileGames.find(g => g.id === selectedGameId) || profileGames[0];
     selectedGameId = gameDef.id;
     const gameSave = getGameSave(family, activeProfile.id, gameDef);
+    const deviceSettings = readDeviceSettings();
+    const isSelectedGameEnabled = isGamePackEnabled(deviceSettings, gameDef.id);
+    const startModeDisabledAttr = isSelectedGameEnabled
+      ? ''
+      : ' disabled title="Enable this game pack on this device to play"';
+    const enabledProfilePackCount = profileGames.filter(g => isGamePackEnabled(deviceSettings, g.id)).length;
+    const totalEnabledPackCount = games.filter(g => isGamePackEnabled(deviceSettings, g.id)).length;
+    const otherProfilesHaveDisabledPacks = (games.length - totalEnabledPackCount) > (profileGames.length - enabledProfilePackCount);
+
+    const factions = getCompanionFactions(gameDef);
+    if (parentFactionFilter !== 'All' && !factions.includes(parentFactionFilter)) {
+      parentFactionFilter = 'All';
+    }
+    const filteredCompanions = filterCompanionsByFaction(gameDef.companions, parentFactionFilter);
 
     // Compute Learning Overview Metrics
     let totalRounds = 0;
@@ -139,7 +194,7 @@ export function createParentsController({
         balanceCalloutHTML = `
           <div class="balance-callout">
             <span>⚖️ <strong>Practice Balance Note:</strong> ${pct}% of rounds (${top.stat.rounds} of ${totalRounds}) were played in <strong>${top.meta.icon} ${escapeHtml(top.meta.title)}</strong>.${suggestNote}</span>
-            <button type="button" class="parent-small-btn" data-action="parent-start-mode" data-mode-id="${escapeHtml(targetModeId)}">Try Another Quest →</button>
+            <button type="button" class="parent-small-btn" data-action="parent-start-mode" data-mode-id="${escapeHtml(targetModeId)}"${startModeDisabledAttr}>Try Another Quest →</button>
           </div>
         `;
       }
@@ -196,7 +251,7 @@ export function createParentsController({
               <span>${x.meta.icon} ${escapeHtml(x.meta.title)} <small style="color:var(--ink-500);">(${x.stat.rounds} ${x.stat.rounds === 1 ? 'round' : 'rounds'})</small></span>
               <span style="display:flex; align-items:center; gap:6px;">
                 <span class="acc-pill low">${x.acc}% 1st-try</span>
-                <button type="button" class="parent-small-btn" data-action="parent-start-mode" data-mode-id="${escapeHtml(x.meta.id)}">Start →</button>
+                <button type="button" class="parent-small-btn" data-action="parent-start-mode" data-mode-id="${escapeHtml(x.meta.id)}"${startModeDisabledAttr}>Start →</button>
               </span>
             </div>
           `),
@@ -209,7 +264,7 @@ export function createParentsController({
           ...unpracticedOrLight.map(x => `
             <div class="insight-item warn">
               <span>${x.meta.icon} ${escapeHtml(x.meta.title)} <small style="color:var(--ink-500);">(${(x.stat.rounds || 0) === 0 ? 'Not yet practiced' : 'Only 1 round played'})</small></span>
-              <button type="button" class="parent-small-btn" data-action="parent-start-mode" data-mode-id="${escapeHtml(x.meta.id)}">Start →</button>
+              <button type="button" class="parent-small-btn" data-action="parent-start-mode" data-mode-id="${escapeHtml(x.meta.id)}"${startModeDisabledAttr}>Start →</button>
             </div>
           `)
         ].join('');
@@ -249,7 +304,7 @@ export function createParentsController({
           <div>${bestCell}</div>
           <div><span class="acc-pill ${accCls}">Acc: ${accLabel}</span></div>
           <div style="font-size:0.8rem; color:var(--ink-700);">${compCell}</div>
-          <div><button type="button" class="parent-small-btn" data-action="parent-start-mode" data-mode-id="${escapeHtml(x.meta.id)}">Start →</button></div>
+          <div><button type="button" class="parent-small-btn" data-action="parent-start-mode" data-mode-id="${escapeHtml(x.meta.id)}"${startModeDisabledAttr}>Start →</button></div>
         </div>
       `;
     }).join('');
@@ -306,148 +361,105 @@ export function createParentsController({
     };
 
     let adminGridHTML = '';
-    if (parentViewMode === 'order') {
-      adminGridHTML = `<div class="parent-dragons-grid">${gameDef.companions.slice().sort((a, b) => a.orderNum - b.orderNum).map(renderCompanionTile).join('')}</div>`;
+    if (filteredCompanions.length === 0) {
+      adminGridHTML = `<p style="margin:0; font-size:0.86rem; color:var(--ink-500); font-weight:600;">No ${escapeHtml(gameDef.companionNounPluralLower)} match this faction filter.</p>`;
+    } else if (parentViewMode === 'order') {
+      adminGridHTML = `<div class="parent-dragons-grid">${filteredCompanions.slice().sort((a, b) => a.orderNum - b.orderNum).map(renderCompanionTile).join('')}</div>`;
     } else {
       const groups = [{ id: 'starter', icon: '🌟', title: 'Starter Companion' }, ...gameDef.allModesMeta];
       adminGridHTML = groups.map(g => {
-        const list = getModeCompanions(gameDef, g.id);
+        const list = filterCompanionsByFaction(getModeCompanions(gameDef, g.id), parentFactionFilter);
         if (list.length === 0) return '';
+        const unlockedInGroup = list.filter(c => c.id === gameDef.starterId || isCompanionUnlocked(gameSave, c.id)).length;
         return `
           <div style="margin-bottom:14px;">
-            <h4 style="margin:0 0 8px; font-size:0.92rem; color:var(--jade-700);">${g.icon} ${escapeHtml(g.title)} (${list.filter(c => isCompanionUnlocked(gameSave, c.id)).length}/${list.length})</h4>
+            <h4 style="margin:0 0 8px; font-size:0.92rem; color:var(--jade-700);">${g.icon} ${escapeHtml(g.title)} (${unlockedInGroup}/${list.length})</h4>
             <div class="parent-dragons-grid">${list.map(renderCompanionTile).join('')}</div>
           </div>
         `;
       }).join('');
     }
 
+    const devicePacksHTML = profileGames.map(g => {
+      const enabled = isGamePackEnabled(deviceSettings, g.id);
+      const gSave = getGameSave(family, activeProfile.id, g);
+      const packStatText = g.gameType === 'timed-sprint'
+        ? `🎯 ${gSave.totalSolved} Solved`
+        : `⭐ ${gSave.stars} Stars`;
+      return `
+        <div class="parent-pack-tile ${enabled ? 'enabled' : 'disabled'}">
+          <div class="parent-pack-owner">
+            <span class="tribe-pill">${escapeHtml(g.gradeLabel)}</span>
+            <span class="parent-pack-stat">${packStatText}</span>
+          </div>
+          <div class="parent-pack-title">${g.companionEmoji} ${escapeHtml(g.title)}</div>
+          <button
+            type="button"
+            id="btn-parent-pack-${escapeHtml(g.id)}"
+            class="pack-switch-btn ${enabled ? 'is-on' : 'is-off'}"
+            data-action="parent-toggle-game-pack"
+            data-game-id="${escapeHtml(g.id)}"
+            aria-pressed="${enabled ? 'true' : 'false'}"
+          >
+            <span class="pack-switch-track" aria-hidden="true"><span class="pack-switch-thumb"></span></span>
+            <span class="pack-switch-text">
+              <strong>${enabled ? 'Enabled' : 'Disabled'}</strong>
+              <small>${enabled ? 'Tap to hide on device' : 'Tap to show on device'}</small>
+            </span>
+          </button>
+        </div>
+      `;
+    }).join('');
+
+    const factionFilterBarHTML = factions.length > 0 ? `
+      <div class="parent-faction-filter-bar">
+        <span class="parents-context-label">Filter by Faction:</span>
+        <div id="parent-faction-filters" class="parent-faction-pills" role="group" aria-label="Filter by Faction">
+          <button
+            type="button"
+            class="parent-small-btn ${parentFactionFilter === 'All' ? 'active' : ''}"
+            data-action="parent-set-faction-filter"
+            data-faction="All"
+          >All (${gameDef.companions.length})</button>
+          ${factions.map(faction => `
+            <button
+              type="button"
+              class="parent-small-btn ${parentFactionFilter === faction ? 'active' : ''}"
+              data-action="parent-set-faction-filter"
+              data-faction="${escapeHtml(faction)}"
+            >${escapeHtml(faction)} (${filterCompanionsByFaction(gameDef.companions, faction).length})</button>
+          `).join('')}
+        </div>
+      </div>
+    ` : '';
+
+    const dragonsToolbarNote = parentFactionFilter !== 'All'
+      ? `Showing ${filteredCompanions.length} of ${gameDef.companions.length} ${escapeHtml(gameDef.companionNounPluralLower)} in ${escapeHtml(parentFactionFilter)} — tap any card to lock or unlock.`
+      : `Tap any ${escapeHtml(gameDef.companionNoun.toLowerCase())} below to lock or unlock it immediately.`;
+
     container.innerHTML = `
       <div class="parents-topbar">
         <div>
           <h2 style="margin:0; font-size:1.35rem;">📊 Parent Overview &amp; Settings</h2>
-          <p style="margin:2px 0 0; font-size:0.88rem; color:var(--ink-700);">Switch kid profiles, review math strengths, and manage unlocks or backups.</p>
+          <p style="margin:2px 0 0; font-size:0.88rem; color:var(--ink-700);">Back up your family save, pick a kid profile, and manage their device packs or game progress.</p>
         </div>
         <button type="button" id="btn-parent-lock-exit" class="primary-action-btn" style="padding:10px 18px; font-size:0.92rem;" data-action="parent-lock-exit">
-          🔒 ${showContextHeader ? 'Lock &amp; Back to Arcade' : 'Lock &amp; Back to Game'}
+          🔒 ${(showContextHeader || !isSelectedGameEnabled) ? 'Lock &amp; Back to Arcade' : 'Lock &amp; Back to Game'}
         </button>
       </div>
 
-      <div class="parents-context-bar">
-        <div class="parents-context-group">
-          <span class="parents-context-label">Kid Profile:</span>
-          ${family.profiles.map(p => `
-            <button type="button" class="parent-small-btn ${p.id === activeProfile.id ? 'active' : ''}" data-action="parent-select-profile" data-profile-id="${escapeHtml(p.id)}">
-              ${escapeHtml(p.avatar)} ${escapeHtml(p.name)}
-            </button>
-          `).join('')}
-        </div>
-        <div class="parent-profile-editor">
-          <span class="parents-context-label">Rename:</span>
-          <input id="parent-profile-name-input" class="parent-name-input" type="text" maxlength="24" value="${escapeHtml(activeProfile.name)}" aria-label="Profile Name" />
-          <button type="button" class="parent-small-btn" data-action="parent-save-profile-name">Save Name</button>
-          <div style="display:flex; gap:4px; flex-wrap:wrap;">
-            ${PROFILE_AVATAR_OPTIONS.map(av => `
-              <button type="button" class="avatar-pick-btn ${activeProfile.avatar === av ? 'active' : ''}" data-action="parent-pick-avatar" data-avatar="${escapeHtml(av)}" title="Choose avatar">${av}</button>
-            `).join('')}
+      <section id="parent-family-section" class="parent-zone-section">
+        <div class="parent-section-card" id="parent-family-backup" style="margin-bottom:0;">
+          <div class="parent-section-title" style="margin-bottom:4px;">
+            <span>💾 Family Backup &amp; Restore</span>
           </div>
-        </div>
-        <div class="parents-context-group">
-          <span class="parents-context-label">Game:</span>
-          ${profileGames.map(g => `
-            <button type="button" class="parent-small-btn ${g.id === gameDef.id ? 'active' : ''}" data-action="parent-select-game" data-game-id="${escapeHtml(g.id)}">
-              ${g.companionEmoji} ${escapeHtml(g.title)}
-            </button>
-          `).join('')}
-        </div>
-      </div>
-
-      <div class="parents-kpi-grid">
-        ${isTimedSprint ? `
-          <div class="parents-kpi-card">
-            <div class="parents-kpi-label">Facts Solved</div>
-            <div class="parents-kpi-val">${gameSave.totalSolved}</div>
-          </div>
-          <div class="parents-kpi-card">
-            <div class="parents-kpi-label">First-Try Accuracy</div>
-            <div class="parents-kpi-val">${overallAcc}</div>
-          </div>
-          <div class="parents-kpi-card">
-            <div class="parents-kpi-label">5-Min Best</div>
-            <div class="parents-kpi-val">${best5m} / ${grandGoal}</div>
-          </div>
-          <div class="parents-kpi-card">
-            <div class="parents-kpi-label">5-Min Best Pace</div>
-            <div class="parents-kpi-val">${best5mPace.toFixed(1)} / min</div>
-          </div>
-        ` : `
-          <div class="parents-kpi-card">
-            <div class="parents-kpi-label">Puzzles Solved</div>
-            <div class="parents-kpi-val">${gameSave.totalSolved}</div>
-          </div>
-          <div class="parents-kpi-card">
-            <div class="parents-kpi-label">First-Try Accuracy</div>
-            <div class="parents-kpi-val">${overallAcc}</div>
-          </div>
-          <div class="parents-kpi-card">
-            <div class="parents-kpi-label">Quests Explored</div>
-            <div class="parents-kpi-val">${modesExplored} / ${gameDef.allModesMeta.length}</div>
-          </div>
-          <div class="parents-kpi-card">
-            <div class="parents-kpi-label">${escapeHtml(gameDef.companionNounPlural)} Unlocked</div>
-            <div class="parents-kpi-val">${unlockedCount} / ${gameDef.companions.length}</div>
-          </div>
-        `}
-      </div>
-
-      ${balanceCalloutHTML}
-
-      <div class="parent-insights-grid">
-        <div class="parent-section-card" id="parent-going-well">
-          <h3 class="parent-section-title">✅ Going Well</h3>
-          ${goingWellHTML}
-        </div>
-        <div class="parent-section-card" id="parent-needs-practice">
-          <h3 class="parent-section-title">🎯 Needs Practice</h3>
-          ${needsPracticeHTML}
-        </div>
-      </div>
-
-      <div class="parent-section-card" style="margin-top:18px;">
-        <h3 class="parent-section-title">📚 All ${gameDef.allModesMeta.length} Puzzle Types Breakdown</h3>
-        <div class="mode-table-list">${modeBreakdownHTML}</div>
-      </div>
-
-      ${mistakesSectionHTML}
-
-      <div class="parent-section-card">
-        <div class="parent-section-title">
-          <span>${gameDef.companionEmoji} ${escapeHtml(gameDef.companionNoun)} Lock / Unlock Controls</span>
-          <div style="display:flex; gap:6px; flex-wrap:wrap;">
-            <button type="button" class="parent-small-btn ${parentViewMode === 'order' ? 'active' : ''}" data-action="parent-view-mode" data-mode="order">Original Order (#1–#${gameDef.companions.length})</button>
-            <button type="button" class="parent-small-btn ${parentViewMode === 'mode' ? 'active' : ''}" data-action="parent-view-mode" data-mode="mode">By Puzzle Type</button>
-          </div>
-        </div>
-        <div class="parent-dragons-toolbar">
-          <span style="font-size:0.84rem; color:var(--ink-700); font-weight:600;">Tap any ${escapeHtml(gameDef.companionNoun.toLowerCase())} below to lock or unlock it immediately.</span>
+          <p style="margin:0 0 12px; font-size:0.84rem; color:var(--ink-700); font-weight:600;">Back up or restore saved progress for all kid profiles and game packs across devices.</p>
+          ${backupStatusMsg ? `
+            <div class="backup-status-banner ${backupStatusIsError ? 'err' : 'ok'}" style="margin-bottom:12px;">
+              ${escapeHtml(backupStatusMsg)}
+            </div>
+          ` : ''}
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            ${legacyCount > 0 ? `<button type="button" id="btn-restore-legacy-unlocks" class="parent-small-btn" data-action="parent-restore-legacy">🕰️ Restore Pre-Update Unlocks (${legacyCount} Dragons)</button>` : ''}
-            <button type="button" id="btn-parent-unlock-all" class="parent-small-btn" data-action="parent-unlock-all">Unlock All ${gameDef.companions.length}</button>
-            <button type="button" id="btn-parent-lock-all" class="parent-small-btn" data-action="parent-lock-all">Lock All (Keep Starter)</button>
-          </div>
-        </div>
-        ${adminGridHTML}
-      </div>
-
-      <div class="parent-section-card">
-        <h3 class="parent-section-title">💾 Family Backup &amp; Reset</h3>
-        ${backupStatusMsg ? `
-          <div class="backup-status-banner ${backupStatusIsError ? 'err' : 'ok'}" style="margin-bottom:12px;">
-            ${escapeHtml(backupStatusMsg)}
-          </div>
-        ` : ''}
-        <div class="parents-footer-actions">
-          <div style="display:flex; gap:10px; flex-wrap:wrap;">
             <button type="button" class="secondary-action-btn" style="font-size:0.84rem; padding:9px 13px;" data-action="parent-download-json">⬇️ Download Backup (.json)</button>
             <label class="secondary-action-btn" style="font-size:0.84rem; padding:9px 13px; cursor:pointer; display:inline-flex; align-items:center;">
               ⬆️ Upload Backup (.json)
@@ -456,31 +468,207 @@ export function createParentsController({
             <button type="button" class="secondary-action-btn" style="font-size:0.84rem; padding:9px 13px;" data-action="parent-export-code">📋 Show / Copy Backup Code</button>
             <button type="button" class="secondary-action-btn" style="font-size:0.84rem; padding:9px 13px;" data-action="parent-import-code">📥 Paste &amp; Restore Code</button>
           </div>
-          <button type="button" class="secondary-action-btn" style="font-size:0.84rem; padding:9px 13px; color:var(--ember-600);" data-action="parent-reset-game">
-            🗑️ Reset ${escapeHtml(activeProfile.name)}’s ${escapeHtml(gameDef.title)}
-          </button>
+          ${backupDrawerMode === 'export' ? `
+            <div class="backup-code-drawer">
+              <div style="font-size:0.85rem; font-weight:800; color:var(--ink-700);">Full Family Backup Code (no character limit — safe to copy):</div>
+              <textarea id="parent-backup-textarea" class="backup-code-textarea" readonly aria-label="Exported Backup Code">${escapeHtml(backupExportValue)}</textarea>
+              <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button type="button" class="primary-action-btn" style="font-size:0.84rem; padding:8px 14px;" data-action="parent-select-copy-code">📋 Select &amp; Copy</button>
+                <button type="button" class="secondary-action-btn" style="font-size:0.84rem; padding:8px 14px;" data-action="parent-close-backup-drawer">Close</button>
+              </div>
+            </div>
+          ` : ''}
+          ${backupDrawerMode === 'import' ? `
+            <div class="backup-code-drawer">
+              <div style="font-size:0.85rem; font-weight:800; color:var(--ink-700);">Paste a Family Backup Code, raw JSON, or legacy Wings of Math backup code below:</div>
+              <textarea id="parent-backup-textarea" class="backup-code-textarea" placeholder="Paste full backup code here (eyJ...)" aria-label="Paste Backup Code"></textarea>
+              <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button type="button" class="primary-action-btn" style="font-size:0.84rem; padding:8px 14px;" data-action="parent-confirm-import-code">✅ Restore Progress Now</button>
+                <button type="button" class="secondary-action-btn" style="font-size:0.84rem; padding:8px 14px;" data-action="parent-close-backup-drawer">Cancel</button>
+              </div>
+            </div>
+          ` : ''}
         </div>
-        ${backupDrawerMode === 'export' ? `
-          <div class="backup-code-drawer">
-            <div style="font-size:0.85rem; font-weight:800; color:var(--ink-700);">Full Family Backup Code (no character limit — safe to copy):</div>
-            <textarea id="parent-backup-textarea" class="backup-code-textarea" readonly aria-label="Exported Backup Code">${escapeHtml(backupExportValue)}</textarea>
-            <div style="display:flex; gap:8px; flex-wrap:wrap;">
-              <button type="button" class="primary-action-btn" style="font-size:0.84rem; padding:8px 14px;" data-action="parent-select-copy-code">📋 Select &amp; Copy</button>
-              <button type="button" class="secondary-action-btn" style="font-size:0.84rem; padding:8px 14px;" data-action="parent-close-backup-drawer">Close</button>
+      </section>
+
+      <section id="parent-kid-profile-section" class="parent-profile-zone">
+        <div class="parent-profile-selector-header">
+          <div style="margin-bottom:12px;">
+            <h3>👤 Kid Profile</h3>
+            <p>Select a child to manage their profile, active game packs on this device, and individual game progress.</p>
+          </div>
+          <div class="parent-profile-menu" role="tablist" aria-label="Select Kid Profile">
+            ${family.profiles.map(p => {
+              const pGames = getProfileGames(p.id);
+              const pEnabledCount = pGames.filter(g => isGamePackEnabled(deviceSettings, g.id)).length;
+              const isSelected = p.id === activeProfile.id;
+              return `
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected="${isSelected ? 'true' : 'false'}"
+                  class="parent-profile-tab ${isSelected ? 'active' : ''}"
+                  data-action="parent-select-profile"
+                  data-profile-id="${escapeHtml(p.id)}"
+                >
+                  <span>${escapeHtml(p.avatar)} ${escapeHtml(p.name)}</span>
+                  <span class="profile-packs-badge ${pEnabledCount < pGames.length ? 'has-off' : ''}">${pEnabledCount}/${pGames.length} on</span>
+                </button>
+              `;
+            }).join('')}
+          </div>
+        </div>
+
+        <div class="parent-section-card" id="parent-kid-profiles">
+          <h3 class="parent-section-title">✏️ ${escapeHtml(activeProfile.name)}’s Name &amp; Avatar</h3>
+          <div class="parent-profile-editor">
+            <span class="parents-context-label">Rename:</span>
+            <input id="parent-profile-name-input" class="parent-name-input" type="text" maxlength="24" value="${escapeHtml(activeProfile.name)}" aria-label="Profile Name" />
+            <button type="button" class="parent-small-btn" data-action="parent-save-profile-name">Save Name</button>
+            <div style="display:flex; gap:4px; flex-wrap:wrap;">
+              ${PROFILE_AVATAR_OPTIONS.map(av => `
+                <button type="button" class="avatar-pick-btn ${activeProfile.avatar === av ? 'active' : ''}" data-action="parent-pick-avatar" data-avatar="${escapeHtml(av)}" title="Choose avatar">${av}</button>
+              `).join('')}
             </div>
           </div>
-        ` : ''}
-        ${backupDrawerMode === 'import' ? `
-          <div class="backup-code-drawer">
-            <div style="font-size:0.85rem; font-weight:800; color:var(--ink-700);">Paste a Family Backup Code, raw JSON, or legacy Wings of Math backup code below:</div>
-            <textarea id="parent-backup-textarea" class="backup-code-textarea" placeholder="Paste full backup code here (eyJ...)" aria-label="Paste Backup Code"></textarea>
-            <div style="display:flex; gap:8px; flex-wrap:wrap;">
-              <button type="button" class="primary-action-btn" style="font-size:0.84rem; padding:8px 14px;" data-action="parent-confirm-import-code">✅ Restore Progress Now</button>
-              <button type="button" class="secondary-action-btn" style="font-size:0.84rem; padding:8px 14px;" data-action="parent-close-backup-drawer">Cancel</button>
+        </div>
+
+        <div class="parent-section-card" id="parent-device-packs">
+          <div class="parent-section-title">
+            <span>📱 ${escapeHtml(activeProfile.name)}’s Game Packs on This Device</span>
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+              <span class="acc-pill ${enabledProfilePackCount > 0 ? 'good' : 'low'}">${enabledProfilePackCount} / ${profileGames.length} Enabled</span>
+              ${enabledProfilePackCount < profileGames.length ? `<button type="button" id="btn-parent-enable-profile-packs" class="parent-small-btn" data-action="parent-enable-profile-packs">Enable All for ${escapeHtml(activeProfile.name)}</button>` : ''}
+              ${otherProfilesHaveDisabledPacks ? `<button type="button" id="btn-parent-enable-all-packs" class="parent-small-btn" data-action="parent-enable-all-packs">Enable All Arcade Packs (${totalEnabledPackCount}/${games.length})</button>` : ''}
             </div>
           </div>
-        ` : ''}
-      </div>
+          <p style="margin:0 0 12px; font-size:0.84rem; color:var(--ink-700); font-weight:600;">Saved on this browser/device only (not included in Family Backups). Turning a pack off hides it from ${escapeHtml(activeProfile.name)}’s Arcade shelf without deleting stars or companions.</p>
+          <div class="parent-packs-grid">${devicePacksHTML}</div>
+        </div>
+
+        <section id="parent-game-pack-section" class="parent-game-pack-zone">
+          <div class="parent-game-selector-header">
+            <div style="margin-bottom:12px;">
+              <h3>🎮 Selected Game Pack</h3>
+              <p>Everything below applies to <strong>${escapeHtml(activeProfile.name)}</strong>’s <strong>${escapeHtml(gameDef.title)}</strong>.</p>
+            </div>
+            <div class="parent-game-menu" role="tablist" aria-label="Select Game Pack">
+              ${profileGames.map(g => {
+                const gEnabled = isGamePackEnabled(deviceSettings, g.id);
+                const isSelected = g.id === gameDef.id;
+                return `
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected="${isSelected ? 'true' : 'false'}"
+                    class="parent-game-tab ${isSelected ? 'active' : ''}"
+                    data-action="parent-select-game"
+                    data-game-id="${escapeHtml(g.id)}"
+                  >
+                    <span>${g.companionEmoji} ${escapeHtml(g.title)}</span>
+                    ${gEnabled ? '' : '<span class="pack-off-pill">Off on Device</span>'}
+                  </button>
+                `;
+              }).join('')}
+            </div>
+          </div>
+
+          ${!isSelectedGameEnabled ? `
+            <div class="device-disabled-banner">
+              <span>📵 <strong>${escapeHtml(gameDef.title)}</strong> is currently disabled on this device (saved progress is kept safe).</span>
+              <button type="button" class="parent-small-btn" data-action="parent-toggle-game-pack" data-game-id="${escapeHtml(gameDef.id)}">Enable on This Device</button>
+            </div>
+          ` : ''}
+
+          <div class="parents-kpi-grid">
+            ${isTimedSprint ? `
+              <div class="parents-kpi-card">
+                <div class="parents-kpi-label">Facts Solved</div>
+                <div class="parents-kpi-val">${gameSave.totalSolved}</div>
+              </div>
+              <div class="parents-kpi-card">
+                <div class="parents-kpi-label">First-Try Accuracy</div>
+                <div class="parents-kpi-val">${overallAcc}</div>
+              </div>
+              <div class="parents-kpi-card">
+                <div class="parents-kpi-label">5-Min Best</div>
+                <div class="parents-kpi-val">${best5m} / ${grandGoal}</div>
+              </div>
+              <div class="parents-kpi-card">
+                <div class="parents-kpi-label">5-Min Best Pace</div>
+                <div class="parents-kpi-val">${best5mPace.toFixed(1)} / min</div>
+              </div>
+            ` : `
+              <div class="parents-kpi-card">
+                <div class="parents-kpi-label">Puzzles Solved</div>
+                <div class="parents-kpi-val">${gameSave.totalSolved}</div>
+              </div>
+              <div class="parents-kpi-card">
+                <div class="parents-kpi-label">First-Try Accuracy</div>
+                <div class="parents-kpi-val">${overallAcc}</div>
+              </div>
+              <div class="parents-kpi-card">
+                <div class="parents-kpi-label">Quests Explored</div>
+                <div class="parents-kpi-val">${modesExplored} / ${gameDef.allModesMeta.length}</div>
+              </div>
+              <div class="parents-kpi-card">
+                <div class="parents-kpi-label">${escapeHtml(gameDef.companionNounPlural)} Unlocked</div>
+                <div class="parents-kpi-val">${unlockedCount} / ${gameDef.companions.length}</div>
+              </div>
+            `}
+          </div>
+
+          ${balanceCalloutHTML}
+
+          <div class="parent-insights-grid">
+            <div class="parent-section-card" id="parent-going-well">
+              <h3 class="parent-section-title">✅ Going Well</h3>
+              ${goingWellHTML}
+            </div>
+            <div class="parent-section-card" id="parent-needs-practice">
+              <h3 class="parent-section-title">🎯 Needs Practice</h3>
+              ${needsPracticeHTML}
+            </div>
+          </div>
+
+          <div class="parent-section-card" style="margin-top:18px;">
+            <h3 class="parent-section-title">📚 All ${gameDef.allModesMeta.length} Puzzle Types Breakdown</h3>
+            <div class="mode-table-list">${modeBreakdownHTML}</div>
+          </div>
+
+          ${mistakesSectionHTML}
+
+          <div class="parent-section-card">
+            <div class="parent-section-title">
+              <span>${gameDef.companionEmoji} ${escapeHtml(gameDef.companionNoun)} Lock / Unlock Controls</span>
+              <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                <button type="button" class="parent-small-btn ${parentViewMode === 'order' ? 'active' : ''}" data-action="parent-view-mode" data-mode="order">Original Order (#1–#${gameDef.companions.length})</button>
+                <button type="button" class="parent-small-btn ${parentViewMode === 'mode' ? 'active' : ''}" data-action="parent-view-mode" data-mode="mode">By Puzzle Type</button>
+              </div>
+            </div>
+            ${factionFilterBarHTML}
+            <div class="parent-dragons-toolbar">
+              <span style="font-size:0.84rem; color:var(--ink-700); font-weight:600;">${dragonsToolbarNote}</span>
+              <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                ${legacyCount > 0 ? `<button type="button" id="btn-restore-legacy-unlocks" class="parent-small-btn" data-action="parent-restore-legacy">🕰️ Restore Pre-Update Unlocks (${legacyCount} Dragons)</button>` : ''}
+                <button type="button" id="btn-parent-unlock-all" class="parent-small-btn" data-action="parent-unlock-all">Unlock All ${gameDef.companions.length}</button>
+                <button type="button" id="btn-parent-lock-all" class="parent-small-btn" data-action="parent-lock-all">Lock All (Keep Starter)</button>
+              </div>
+            </div>
+            ${adminGridHTML}
+          </div>
+
+          <div class="parent-section-card parent-reset-card">
+            <div>
+              <strong>🗑️ Reset ${escapeHtml(gameDef.title)} Progress</strong>
+              <div style="font-size:0.83rem; color:var(--ink-700); font-weight:600; margin-top:2px;">Resets only ${escapeHtml(activeProfile.name)}’s stars, unlocked ${escapeHtml(gameDef.companionNounPluralLower)}, and stats in ${escapeHtml(gameDef.title)} back to 0.</div>
+            </div>
+            <button type="button" class="secondary-action-btn" style="font-size:0.84rem; padding:9px 14px; color:var(--ember-600); border-color:#FCA5A5;" data-action="parent-reset-game">
+              🗑️ Reset ${escapeHtml(activeProfile.name)}’s ${escapeHtml(gameDef.title)}
+            </button>
+          </div>
+        </section>
+      </section>
     `;
   }
 
@@ -551,6 +739,7 @@ export function createParentsController({
         selectedProfileId = actionEl.dataset.profileId;
         const nextOwned = getProfileGames(selectedProfileId);
         selectedGameId = nextOwned[0].id;
+        parentFactionFilter = 'All';
         rerenderFn();
         return true;
       }
@@ -578,13 +767,57 @@ export function createParentsController({
         SFX.tap();
         if (profileGames.some(g => g.id === actionEl.dataset.gameId)) {
           selectedGameId = actionEl.dataset.gameId;
+          parentFactionFilter = 'All';
         }
         rerenderFn();
         return true;
       case 'parent-start-mode':
         if (!parentUnlocked) return true;
+        if (!isGamePackEnabled(readDeviceSettings(), gameDef.id)) return true;
         onStartModeForProfile(activeProfile.id, gameDef.id, actionEl.dataset.modeId);
         return true;
+      case 'parent-toggle-game-pack': {
+        if (!parentUnlocked) return true;
+        const targetGameId = actionEl.dataset.gameId;
+        if (!games.some(g => g.id === targetGameId)) return true;
+        SFX.tap();
+        const currentSettings = readDeviceSettings();
+        const nextEnabled = !isGamePackEnabled(currentSettings, targetGameId);
+        const nextSettings = setGamePackEnabled(currentSettings, targetGameId, nextEnabled, games);
+        writeDeviceSettings(nextSettings);
+        persistDevice();
+        rerenderFn();
+        return true;
+      }
+      case 'parent-enable-profile-packs': {
+        if (!parentUnlocked) return true;
+        SFX.correct(false);
+        let nextSettings = readDeviceSettings();
+        profileGames.forEach(g => {
+          nextSettings = setGamePackEnabled(nextSettings, g.id, true, games);
+        });
+        writeDeviceSettings(nextSettings);
+        persistDevice();
+        rerenderFn();
+        return true;
+      }
+      case 'parent-enable-all-packs': {
+        if (!parentUnlocked) return true;
+        SFX.correct(false);
+        writeDeviceSettings(createDefaultDeviceSettings());
+        persistDevice();
+        rerenderFn();
+        return true;
+      }
+      case 'parent-set-faction-filter': {
+        if (!parentUnlocked) return true;
+        SFX.tap();
+        const requested = actionEl.dataset.faction || 'All';
+        const validFactions = getCompanionFactions(gameDef);
+        parentFactionFilter = (requested === 'All' || validFactions.includes(requested)) ? requested : 'All';
+        rerenderFn();
+        return true;
+      }
       case 'parent-view-mode':
         if (!parentUnlocked) return true;
         SFX.tap();
@@ -811,9 +1044,11 @@ export function createParentsController({
   return {
     render,
     setContext: syncSelectionDefaults,
+    isUnlocked: () => parentUnlocked,
     lock() {
       parentUnlocked = false;
       parentPinError = '';
+      parentFactionFilter = 'All';
       backupDrawerMode = null;
       backupStatusMsg = '';
     },

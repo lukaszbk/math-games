@@ -39,7 +39,7 @@ Then open `http://localhost:8080/` in your browser. All paths are relative (`./c
 - Automatic non-destructive migrations:
   - `localStorage['wings_of_math_save_v1']` migrates into `grade3`’s `factors-and-multiples` save.
   - Existing `math_arcade_save_v1` saves keyed under `primes-and-factors` migrate automatically into `factors-and-multiples`.
-- The **Parents** dashboard (default PIN `885174`) supports renaming profiles, choosing avatars, reviewing sub-skill accuracy and recent mistakes for each child's assigned game, toggling companion unlocks, and importing/exporting backups (both `.json` files and Base64 backup codes, including legacy `wings_of_math_save_v1` codes).
+- The **Parents** dashboard (default PIN `885174`) supports renaming profiles, choosing avatars, enabling or disabling game packs on the current device (`localStorage['math_arcade_device_v1']`) without deleting saved progress, reviewing sub-skill accuracy and recent mistakes for each child's assigned game, filtering companions by faction/tribe/squad and toggling unlocks, and importing/exporting backups (both `.json` files and Base64 backup codes, including legacy `wings_of_math_save_v1` codes).
 
 ## Tests
 

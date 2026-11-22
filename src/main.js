@@ -3,15 +3,19 @@ import { SFX, setSoundEnabled } from './shared/audio.js';
 import {
   getActiveProfile,
   getGameSave,
+  isGamePackEnabled,
+  loadDeviceSettings,
   loadFamilyState,
+  saveDeviceSettings,
   saveFamilyState
 } from './shared/storage.js';
-import { renderArcadeView } from './shared/views/arcade-view.js';
+import { renderArcadeView } from './shared/views/arcade-view.js?v=3';
 import { renderGameHubShell } from './shared/views/game-hub-view.js';
 import { createArenaController } from './shared/views/arena-view.js';
-import { createParentsController } from './shared/views/parents-view.js';
+import { createParentsController } from './shared/views/parents-view.js?v=3';
 
 let familyState = loadFamilyState(GAMES);
+let deviceSettings = loadDeviceSettings(GAMES);
 setSoundEnabled(familyState.soundOn);
 
 let currentGameId = GAMES[0].id;
@@ -27,6 +31,14 @@ const modalDetailEl = document.getElementById('modal-dragon-detail');
 
 function persistFamily() {
   saveFamilyState(familyState);
+}
+
+function persistDeviceSettings() {
+  saveDeviceSettings(deviceSettings);
+}
+
+function isGameAvailableForProfile(game, profile) {
+  return Boolean(game && profile && game.assignedProfileId === profile.id && isGamePackEnabled(deviceSettings, game.id));
 }
 
 const VALID_GAME_TABS = new Set(['play', 'sanctuary', 'guide', 'parents']);
@@ -59,9 +71,11 @@ function navigateHash(hash) {
 
 function getActiveContext() {
   const profile = getActiveProfile(familyState);
-  const owned = GAMES.find(g => g.assignedProfileId === profile.id) || GAMES[0];
+  const owned = GAMES.find(g => isGameAvailableForProfile(g, profile))
+    || GAMES.find(g => g.assignedProfileId === profile.id)
+    || GAMES[0];
   const candidate = getGameById(currentGameId);
-  const gameDef = (candidate && candidate.assignedProfileId === profile.id) ? candidate : owned;
+  const gameDef = isGameAvailableForProfile(candidate, profile) ? candidate : owned;
   const gameSave = getGameSave(familyState, profile.id, gameDef);
   return { familyState, profile, gameDef, gameSave };
 }
@@ -78,7 +92,8 @@ function renderCurrentView() {
     renderArcadeView({
       container: shellEl,
       familyState,
-      games: GAMES
+      games: GAMES,
+      deviceSettings
     });
     return;
   }
@@ -93,16 +108,23 @@ function renderCurrentView() {
     return;
   }
 
-  // Game screen (enforcing per-profile ownership)
+  // Game screen (enforcing per-profile ownership and device-enabled packs)
   const profile = getActiveProfile(familyState);
   const requestedGame = getGameById(route.gameId);
-  if (!requestedGame || requestedGame.assignedProfileId !== profile.id) {
+  const editingCurrentParentsTab = Boolean(
+    requestedGame &&
+    currentTab === 'parents' &&
+    parentsController.isUnlocked()
+  );
+  if (!requestedGame || (!isGameAvailableForProfile(requestedGame, profile) && !editingCurrentParentsTab)) {
+    parentsController.lock();
     window.location.hash = '#/';
     return;
   }
 
   currentGameId = requestedGame.id;
-  const { gameDef, gameSave } = getActiveContext();
+  const gameDef = requestedGame;
+  const gameSave = getGameSave(familyState, profile.id, gameDef);
   document.body.dataset.theme = gameDef.theme || 'parchment';
   document.title = `${gameDef.title} — Family Math Arcade`;
 
@@ -135,12 +157,17 @@ function renderRoute() {
   if (route.screen === 'game') {
     const profile = getActiveProfile(familyState);
     const requestedGame = getGameById(route.gameId);
-    if (!requestedGame || requestedGame.assignedProfileId !== profile.id) {
+    const editingCurrentParentsTab = Boolean(
+      requestedGame &&
+      route.tab === 'parents' &&
+      parentsController.isUnlocked()
+    );
+    if (!requestedGame || (!isGameAvailableForProfile(requestedGame, profile) && !editingCurrentParentsTab)) {
       parentsController.lock();
       window.history.replaceState(null, '', '#/');
       document.body.dataset.theme = 'parchment';
       document.title = 'Family Math Arcade';
-      renderArcadeView({ container: shellEl, familyState, games: GAMES });
+      renderArcadeView({ container: shellEl, familyState, games: GAMES, deviceSettings });
       return;
     }
 
@@ -156,7 +183,9 @@ function renderRoute() {
     }
   } else if (route.screen === 'arcade-parents') {
     const profile = getActiveProfile(familyState);
-    const assignedGame = GAMES.find(g => g.assignedProfileId === profile.id) || GAMES[0];
+    const assignedGame = GAMES.find(g => isGameAvailableForProfile(g, profile))
+      || GAMES.find(g => g.assignedProfileId === profile.id)
+      || GAMES[0];
     parentsController.setContext(profile.id, assignedGame.id);
   } else {
     parentsController.lock();
@@ -185,7 +214,16 @@ parentsController = createParentsController({
     setSoundEnabled(familyState.soundOn);
   },
   onSave: persistFamily,
+  getDeviceSettings: () => deviceSettings,
+  setDeviceSettings: (next) => {
+    deviceSettings = next;
+  },
+  onSaveDeviceSettings: persistDeviceSettings,
   onStartModeForProfile: (profileId, gameId, modeId) => {
+    const targetGame = getGameById(gameId);
+    if (!targetGame || targetGame.assignedProfileId !== profileId || !isGamePackEnabled(deviceSettings, gameId)) {
+      return;
+    }
     parentsController.lock();
     familyState.activeProfileId = profileId;
     currentGameId = gameId;
@@ -197,7 +235,9 @@ parentsController = createParentsController({
   },
   onBackToGameOrArcade: () => {
     const route = parseRoute(window.location.hash);
-    if (route.screen === 'arcade-parents') {
+    const profile = getActiveProfile(familyState);
+    const currentGame = getGameById(currentGameId);
+    if (route.screen === 'arcade-parents' || !isGameAvailableForProfile(currentGame, profile)) {
       navigateHash('#/');
     } else {
       currentTab = 'play';
@@ -234,7 +274,10 @@ function handleDocumentClick(e) {
     return;
   }
 
-  const actionEl = e.target.closest('[data-action]');
+  const clickTarget = (e.target && typeof e.target.closest === 'function')
+    ? e.target
+    : (e.target && e.target.parentElement);
+  const actionEl = clickTarget ? clickTarget.closest('[data-action]') : null;
   if (!actionEl) return;
 
   const action = actionEl.dataset.action;
@@ -258,7 +301,7 @@ function handleDocumentClick(e) {
       const gid = actionEl.dataset.gameId;
       const profile = getActiveProfile(familyState);
       const targetGame = getGameById(gid);
-      if (!targetGame || targetGame.assignedProfileId !== profile.id) return;
+      if (!isGameAvailableForProfile(targetGame, profile)) return;
       currentTab = 'play';
       activeSanctuaryFilter = 'All';
       navigateHash(`#/game/${gid}`);
@@ -279,10 +322,19 @@ function handleDocumentClick(e) {
     case 'switch-tab': {
       SFX.tap();
       const nextTab = VALID_GAME_TABS.has(actionEl.dataset.tab) ? actionEl.dataset.tab : 'play';
+      const profile = getActiveProfile(familyState);
+      const activeGame = getGameById(currentGameId);
       if (nextTab !== 'parents') {
         parentsController.lock();
+        if (!isGameAvailableForProfile(activeGame, profile)) {
+          navigateHash('#/');
+          return;
+        }
       } else {
-        const profile = getActiveProfile(familyState);
+        if (!isGameAvailableForProfile(activeGame, profile) && !parentsController.isUnlocked()) {
+          navigateHash('#/');
+          return;
+        }
         parentsController.setContext(profile.id, currentGameId);
       }
       const targetHash = nextTab === 'play'
@@ -291,11 +343,19 @@ function handleDocumentClick(e) {
       navigateHash(targetHash);
       return;
     }
-    case 'start-round':
+    case 'start-round': {
+      const profile = getActiveProfile(familyState);
+      const activeGame = getGameById(currentGameId);
+      if (!isGameAvailableForProfile(activeGame, profile)) {
+        parentsController.lock();
+        navigateHash('#/');
+        return;
+      }
       parentsController.lock();
       currentTab = 'play';
       arenaController.startRound(actionEl.dataset.modeId);
       return;
+    }
     case 'set-sanctuary-filter':
       SFX.tap();
       activeSanctuaryFilter = actionEl.dataset.filter || 'All';
@@ -336,6 +396,13 @@ window.addEventListener('keydown', (e) => {
   if (parentsController.handleKeyDown(e, renderCurrentView)) return;
   if (e.target && e.target.id === 'card-mode-mix' && (e.key === 'Enter' || e.key === ' ')) {
     e.preventDefault();
+    const profile = getActiveProfile(familyState);
+    const activeGame = getGameById(currentGameId);
+    if (!isGameAvailableForProfile(activeGame, profile)) {
+      parentsController.lock();
+      navigateHash('#/');
+      return;
+    }
     arenaController.startRound('mix');
     return;
   }

@@ -1,11 +1,13 @@
 import { escapeHtml } from '../dom.js';
-import { getActiveProfile, getGameSave } from '../storage.js';
+import { getActiveProfile, getGameSave, isGamePackEnabled, loadDeviceSettings } from '../storage.js';
 import { getActiveBuddy, getUnlockedCompanions, isCompanionUnlocked } from '../progression.js';
 
-export function renderArcadeView({ container, familyState, games }) {
+export function renderArcadeView({ container, familyState, games, deviceSettings = null }) {
   if (!container) return;
   const activeProfile = getActiveProfile(familyState);
-  const assignedGames = games.filter(g => g.assignedProfileId === activeProfile.id);
+  const effectiveDeviceSettings = deviceSettings || loadDeviceSettings(games);
+  const profileOwnedGames = games.filter(g => g.assignedProfileId === activeProfile.id);
+  const assignedGames = profileOwnedGames.filter(g => isGamePackEnabled(effectiveDeviceSettings, g.id));
 
   const renderGameCard = (game) => {
     const save = getGameSave(familyState, activeProfile.id, game);
@@ -102,9 +104,18 @@ export function renderArcadeView({ container, familyState, games }) {
           <span class="shelf-badge">Picked for You</span>
         </h2>
       </div>
-      <div class="arcade-games-grid">
-        ${assignedGames.map(renderGameCard).join('')}
-      </div>
+      ${assignedGames.length > 0 ? `
+        <div class="arcade-games-grid">
+          ${assignedGames.map(renderGameCard).join('')}
+        </div>
+      ` : `
+        <div class="arcade-empty-card">
+          <div class="arcade-empty-icon" aria-hidden="true">📵</div>
+          <h3>No game packs enabled on this device</h3>
+          <p>Game packs for <strong>${escapeHtml(activeProfile.name)}</strong> are currently turned off on this device. A parent can re-enable them anytime in Parent Settings.</p>
+          <button type="button" class="secondary-action-btn" data-action="open-arcade-parents">🔒 Open Parent Settings</button>
+        </div>
+      `}
     </section>
   `;
 }
