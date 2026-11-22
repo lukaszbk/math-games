@@ -1,0 +1,299 @@
+/* ============================================================
+   Money Match: Dragon Hoard Duel
+   Treasure-card duels, bill/IOU chips, and the guide money line.
+   ============================================================ */
+
+.money-duel {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: stretch;
+  gap: 12px;
+  width: 100%;
+  max-width: 760px;
+  margin: 6px auto 0;
+}
+
+.hoard-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 180px;
+  padding: 14px 12px;
+  border-radius: var(--radius-lg);
+  border: 3px solid var(--border-strong);
+  background: linear-gradient(160deg, #FFFFFF 0%, var(--bg-subtle) 100%);
+  box-shadow: var(--shadow-md);
+  color: var(--ink-900);
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.hoard-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--gold-500);
+}
+
+.hoard-card:active {
+  transform: translateY(1px);
+}
+
+.hoard-card:focus-visible {
+  outline: 3px solid var(--gold-400);
+  outline-offset: 3px;
+}
+
+.hoard-card.tone-neg {
+  background: linear-gradient(160deg, #FFF8F8 0%, #FDEBEB 100%);
+  border-color: #F0B0B0;
+}
+
+.hoard-card.tone-mixed {
+  background: linear-gradient(160deg, #FFFDF6 0%, #F2F6FF 100%);
+}
+
+.hoard-card.correct {
+  background: var(--jade-100);
+  border-color: var(--jade-600);
+  color: var(--jade-700);
+}
+
+.hoard-card.wrong {
+  background: var(--ember-100);
+  border-color: var(--ember-500);
+  color: var(--ember-600);
+}
+
+.hoard-tag {
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-500);
+}
+
+.hoard-hero {
+  display: block;
+  font-size: clamp(1.55rem, 3.2vw, 2.4rem);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.tone-neg .hoard-hero {
+  color: var(--ember-600);
+}
+
+.hoard-caption {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--ink-500);
+}
+
+.hoard-pick {
+  font-size: 0.74rem;
+  font-weight: 900;
+  color: var(--gold-700);
+  background: var(--gold-100);
+  border-radius: 999px;
+  padding: 3px 11px;
+}
+
+/* Bills, coins, and IOU notes */
+.hoard-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.money-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 76px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 2px solid var(--border-warm);
+  background: #FFFFFF;
+  box-shadow: var(--shadow-sm);
+}
+
+.money-chip .chip-plus,
+.hoard-chips .chip-plus {
+  align-self: center;
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: var(--ink-500);
+}
+
+.money-chip .chip-amt {
+  font-size: 1.24rem;
+  font-weight: 900;
+}
+
+.money-chip .chip-note {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-500);
+}
+
+.money-chip.chip-cash {
+  border-color: #A7D8B0;
+  background: linear-gradient(160deg, #F5FDF7 0%, #E3F6EA 100%);
+  color: #14532D;
+}
+
+.money-chip.chip-debt {
+  border-color: #F1A9A9;
+  background: linear-gradient(160deg, #FFF6F6 0%, #FCE3E3 100%);
+  color: var(--ember-600);
+}
+
+/* The middle “VS” medallion */
+.duel-vs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.duel-vs span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: var(--gold-500);
+  color: #FFFFFF;
+  font-size: 0.95rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  box-shadow: var(--shadow-md);
+}
+
+/* The objective banner shown above every duel */
+.duel-goal {
+  max-width: 760px;
+  margin: 0 auto 8px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: linear-gradient(100deg, var(--gold-100), var(--jade-100));
+  border: 2px solid var(--gold-400);
+  color: var(--gold-700);
+  font-size: 0.92rem;
+  font-weight: 900;
+  letter-spacing: 0.01em;
+  text-align: center;
+}
+
+/* Debt coaching line under a duel */
+.duel-hint {
+  max-width: 640px;
+  margin: 10px auto 0;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1.5px dashed #F5B5B5;
+  background: var(--ember-100);
+  color: var(--ember-600);
+  font-size: 0.86rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+/* > < = highlight inside the feedback box */
+.cmp-symbol {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 3px 12px;
+  border-radius: 999px;
+  background: var(--gold-100);
+  color: var(--gold-700);
+  font-size: 1.05em;
+  font-weight: 900;
+}
+
+/* Guide-only variants (never clickable) */
+.hoard-card.static {
+  min-height: 150px;
+  cursor: default;
+  box-shadow: var(--shadow-sm);
+}
+
+.hoard-card.static:hover {
+  transform: none;
+  border-color: var(--border-strong);
+}
+
+.static-duel {
+  max-width: 620px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.money-line {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--ink-500);
+}
+
+.money-line .ml-cells {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.money-line .ml-cell {
+  padding: 5px 8px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border-warm);
+  background: #FFFFFF;
+  font-weight: 900;
+}
+
+.money-line .ml-cell.is-neg {
+  border-color: #F1A9A9;
+  background: var(--ember-100);
+  color: var(--ember-600);
+}
+
+.money-line .ml-cell.is-pos {
+  border-color: #A7D8B0;
+  background: #E7F7EC;
+  color: #166534;
+}
+
+.money-line .ml-cell.is-zero {
+  border-color: var(--gold-400);
+  background: var(--gold-100);
+  color: var(--gold-700);
+}
+
+@media (max-width: 720px) {
+  .money-duel {
+    grid-template-columns: 1fr;
+  }
+
+  .duel-vs span {
+    width: 44px;
+    height: 44px;
+  }
+
+  .hoard-card {
+    min-height: 138px;
+  }
+}

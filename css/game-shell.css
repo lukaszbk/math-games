@@ -235,6 +235,11 @@ body[data-theme="sky"] .featured-mix-banner {
   box-shadow: 0 10px 24px rgba(3, 105, 161, 0.22);
 }
 
+body[data-theme="hoard"] .featured-mix-banner {
+  background: linear-gradient(135deg, #4C1D95 0%, #6D28D9 55%, #7C3AED 100%);
+  box-shadow: 0 10px 24px rgba(109, 40, 217, 0.24);
+}
+
 .featured-mix-banner:hover {
   transform: translateY(-2px);
   box-shadow: 0 14px 28px rgba(15, 118, 110, 0.28);

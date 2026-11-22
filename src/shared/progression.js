@@ -57,7 +57,13 @@ export function getNextCompanionSpotlight(gameSave, gameDef, preferredExcludeMod
   return candidates[0];
 }
 
-export function calculateRoundStars(modeId, firstTryCount, mixBonusLabel = '⛰️ Daily Mix Courage Bonus') {
+export function calculateRoundStars(modeId, firstTryCount, mixBonusLabel = '⛰️ Daily Mix Courage Bonus', gameDef = null) {
+  // Games may define their own award scheme (e.g. Money Match awards 1 ⭐ per
+  // first-try match so a flawless 10-puzzle run always hatches one egg).
+  if (gameDef && typeof gameDef.calculateRoundStars === 'function') {
+    return gameDef.calculateRoundStars(modeId, firstTryCount, mixBonusLabel);
+  }
+
   let starsEarned = 3;
   const breakdown = [{ label: '✅ Completed 10-Puzzle Series', val: '+3 ⭐' }];
 
@@ -79,7 +85,7 @@ export function calculateRoundStars(modeId, firstTryCount, mixBonusLabel = '⛰�
 
 export function applyRoundCompletion({ gameSave, gameDef, modeId, firstTryCount, now = Date.now() }) {
   const mixLabel = gameDef.mixBonusLabel || `${gameDef.mixMeta.icon} ${gameDef.mixMeta.title} Courage Bonus`;
-  const { starsEarned, breakdown } = calculateRoundStars(modeId, firstTryCount, mixLabel);
+  const { starsEarned, breakdown } = calculateRoundStars(modeId, firstTryCount, mixLabel, gameDef);
 
   gameSave.stars += starsEarned;
   gameSave.totalSolved += 10;

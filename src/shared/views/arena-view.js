@@ -14,6 +14,7 @@ import {
 } from '../progression.js';
 import {
   createRoundState,
+  formatCorrectAnswer,
   recordMistakeInSave,
   recordSkillAttemptInSave
 } from '../round-engine.js';
@@ -1280,13 +1281,16 @@ export function createArenaController({
         const q = roundState.questions[roundState.index];
         const chosen = q.choices[idx];
         const btn = document.getElementById(`choice-btn-${idx}`);
+        const stageCards = document.querySelectorAll(`#question-stage [data-action="submit-choice"][data-index="${idx}"]`);
         if (!chosen) return true;
         if (chosen.id === q.answer) {
           btn?.classList.add('correct');
+          stageCards.forEach(el => el.classList.add('correct'));
           handleCorrectSolve();
         } else {
           btn?.classList.add('wrong');
-          handleWrongAttempt(`Tap <strong>${escapeHtml(q.answer)}</strong> to lock it into memory and continue!`);
+          stageCards.forEach(el => el.classList.add('wrong'));
+          handleWrongAttempt(`Tap <strong>${escapeHtml(formatCorrectAnswer(q))}</strong> to lock it into memory and continue!`);
         }
         return true;
       }

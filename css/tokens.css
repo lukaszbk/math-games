@@ -75,3 +75,19 @@
   --jade-100: #E0F2FE;
   --jade-50: #F0F9FF;
 }
+
+/* Royal Treasure-Vault Theme (Game 4: Money Match — Dragon Hoard Duel) */
+[data-theme="hoard"] {
+  --bg-parchment: #FDFAF2;
+  --bg-parchment-deep: #F6ECD8;
+  --bg-card: #FFFFFF;
+  --bg-subtle: #FBF5E9;
+  --border-warm: #E8D6B4;
+  --border-strong: #D3B98A;
+
+  --jade-700: #6D28D9;
+  --jade-600: #7C3AED;
+  --jade-500: #8B5CF6;
+  --jade-100: #EDE9FE;
+  --jade-50: #F5F3FF;
+}

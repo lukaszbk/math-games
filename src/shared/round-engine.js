@@ -85,6 +85,10 @@ export function formatCorrectAnswer(q) {
   if (Array.isArray(q.answer)) {
     return q.answer.join(', ');
   }
+  if (q.inputType === 'choice' && q.answer === 'equal' && Array.isArray(q.choices)) {
+    const match = q.choices.find(c => c.id === q.answer);
+    if (match && match.label) return match.label;
+  }
   return String(q.answer);
 }
 

@@ -239,6 +239,11 @@
   border-bottom-color: #0369A1;
 }
 
+.arcade-game-card[data-card-theme="hoard"] .arcade-play-cta {
+  background: #7C3AED;
+  border-bottom-color: #6D28D9;
+}
+
 @media (max-width: 680px) {
   .arcade-topbar {
     padding: 12px 14px;
