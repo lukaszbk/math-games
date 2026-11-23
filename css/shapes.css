@@ -1,0 +1,344 @@
+/* ============================================================
+   Shape, Perimeter & Area — SuperKitties Edition
+   Blueprints, goal banners, dual locks, rival duels, & shields.
+   ============================================================ */
+
+.sk-goal-banner {
+  max-width: 640px;
+  margin: 0 auto 4px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.86rem;
+  font-weight: 900;
+  text-align: center;
+  border: 2px solid var(--border-strong);
+  background: var(--bg-subtle);
+  color: var(--ink-900);
+}
+
+.sk-goal-banner.tone-area {
+  background: linear-gradient(100deg, #FCE7F3, #EDE9FE);
+  border-color: #F472B6;
+  color: #9D174D;
+}
+
+.sk-goal-banner.tone-perim {
+  background: linear-gradient(100deg, #FEF3C7, #FFEDD5);
+  border-color: #F59E0B;
+  color: #B45309;
+}
+
+.sk-goal-banner.tone-mystery {
+  background: linear-gradient(100deg, #E0F2FE, #EDE9FE);
+  border-color: #38BDF8;
+  color: #0369A1;
+}
+
+.sk-goal-banner.tone-shape {
+  background: linear-gradient(100deg, #CCFBF1, #E0F2FE);
+  border-color: #14B8A6;
+  color: #0F766E;
+}
+
+.sk-blueprint-svg,
+.sk-shield-svg {
+  width: 100%;
+  max-width: 380px;
+  height: auto;
+  max-height: 225px;
+  display: block;
+  margin: 2px auto;
+}
+
+.sk-blueprint-svg.compact {
+  max-width: 220px;
+  max-height: 140px;
+}
+
+.sk-shield-svg.compact {
+  max-width: 126px;
+  max-height: 98px;
+}
+
+.sk-answer-bar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+  padding: 8px 14px;
+  border-radius: 16px;
+  background: var(--bg-subtle);
+  border: 2px solid var(--border-warm);
+}
+
+.sk-answer-lbl {
+  font-size: 1.08rem;
+  font-weight: 900;
+  color: var(--ink-900);
+}
+
+.sk-unit-pill {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: var(--jade-700);
+  background: var(--jade-100);
+  border: 1.5px solid var(--jade-500);
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+/* Dual Area + Perimeter Vault Lock (multi_slot) */
+.sk-dual-bar {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  width: 100%;
+  max-width: 460px;
+}
+
+.sk-dual-slot-card {
+  flex: 1 1 170px;
+  height: auto;
+  min-height: 76px;
+  padding: 10px 14px;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 1rem;
+}
+
+.sk-dual-slot-name {
+  font-size: 0.74rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-500);
+}
+
+.sk-dual-slot-val-row {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 1.55rem;
+  font-weight: 900;
+}
+
+.sk-dual-unit {
+  font-size: 0.84rem;
+  font-weight: 800;
+  color: var(--ink-500);
+}
+
+/* Hernado Watch (2 rival blueprint cards) */
+.sk-duel-grid {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: stretch;
+  gap: 10px;
+  width: 100%;
+  max-width: 680px;
+  margin: 2px auto 0;
+}
+
+.sk-duel-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 10px;
+  border-radius: var(--radius-lg);
+  border: 3px solid var(--border-strong);
+  background: linear-gradient(160deg, #FFFFFF 0%, var(--bg-subtle) 100%);
+  box-shadow: var(--shadow-md);
+  color: var(--ink-900);
+  transition: transform 0.12s ease, border-color 0.12s ease;
+}
+
+.sk-duel-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--jade-500);
+}
+
+.sk-duel-card.correct,
+.sk-shield-card.correct {
+  background: var(--jade-100);
+  border-color: var(--jade-600);
+  color: var(--jade-700);
+}
+
+.sk-duel-card.wrong,
+.sk-shield-card.wrong {
+  background: var(--ember-100);
+  border-color: var(--ember-500);
+  color: var(--ember-600);
+}
+
+.sk-duel-tag,
+.sk-shield-letter {
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--jade-700);
+  background: var(--jade-100);
+  padding: 2px 10px;
+  border-radius: 999px;
+}
+
+.sk-duel-svg-wrap {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sk-duel-sub {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--ink-700);
+}
+
+.sk-duel-pick {
+  font-size: 0.72rem;
+  font-weight: 900;
+  color: var(--gold-700);
+  background: var(--gold-100);
+  border-radius: 999px;
+  padding: 3px 10px;
+}
+
+.sk-duel-vs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sk-duel-vs span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--gold-500);
+  color: #FFFFFF;
+  font-size: 0.88rem;
+  font-weight: 900;
+  box-shadow: var(--shadow-sm);
+}
+
+/* 4-Card Shape Shield Grid */
+.sk-shields-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(130px, 1fr));
+  gap: 10px;
+  width: 100%;
+  max-width: 460px;
+  margin: 2px auto 0;
+}
+
+.sk-shield-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 10px;
+  border-radius: 16px;
+  border: 2.5px solid var(--border-strong);
+  background: #FFFFFF;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.12s ease, border-color 0.12s ease;
+}
+
+.sk-shield-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--jade-500);
+}
+
+/* Multi-Badge Side Count Row */
+.sk-pair-shields {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.sk-mini-badge-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: var(--bg-subtle);
+  border: 2px solid var(--border-warm);
+}
+
+.sk-mini-count {
+  font-size: 0.9rem;
+  font-weight: 900;
+  color: var(--ink-900);
+}
+
+.sk-plus-big {
+  font-size: 1.7rem;
+  font-weight: 900;
+  color: var(--jade-700);
+}
+
+/* Guide Layouts */
+.sk-guide-split {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.sk-guide-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+  margin: 4px 0;
+}
+
+.sk-guide-shields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.sk-guide-shields small {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--ink-700);
+}
+
+@media (max-width: 720px) {
+  .sk-duel-grid {
+    grid-template-columns: 1fr;
+  }
+  .sk-duel-vs span {
+    width: 36px;
+    height: 36px;
+    font-size: 0.78rem;
+  }
+  .sk-guide-split {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .sk-shields-grid {
+    gap: 8px;
+  }
+  .sk-blueprint-svg {
+    max-height: 185px;
+  }
+}

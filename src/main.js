@@ -9,10 +9,10 @@ import {
   saveDeviceSettings,
   saveFamilyState
 } from './shared/storage.js';
-import { renderArcadeView } from './shared/views/arcade-view.js?v=4';
-import { renderGameHubShell } from './shared/views/game-hub-view.js?v=4';
+import { renderArcadeView } from './shared/views/arcade-view.js?v=6';
+import { renderGameHubShell } from './shared/views/game-hub-view.js?v=6';
 import { createArenaController } from './shared/views/arena-view.js';
-import { createParentsController } from './shared/views/parents-view.js?v=4';
+import { createParentsController } from './shared/views/parents-view.js?v=6';
 
 let familyState = loadFamilyState(GAMES);
 let deviceSettings = loadDeviceSettings(GAMES);
