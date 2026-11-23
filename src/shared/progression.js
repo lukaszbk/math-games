@@ -168,7 +168,9 @@ export function syncModeBanksAndBuddyAfterAdminEdit(gameSave, gameDef) {
     const hasLocked = getModeCompanions(gameDef, m).some(c => !isCompanionUnlocked(gameSave, c.id));
     if (!hasLocked) gameSave.modeBank[m] = 0;
   });
-  if (!isCompanionUnlocked(gameSave, gameSave.activeBuddyId)) {
+  const hasValidBuddy = (gameDef.companions || []).some(c => c.id === gameSave.activeBuddyId)
+    && isCompanionUnlocked(gameSave, gameSave.activeBuddyId);
+  if (!hasValidBuddy) {
     const fallback = gameDef.companions.find(c => isCompanionUnlocked(gameSave, c.id)) || gameDef.companions[0];
     gameSave.activeBuddyId = fallback.id;
   }

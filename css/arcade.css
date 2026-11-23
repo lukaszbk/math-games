@@ -251,6 +251,24 @@
   border-bottom-color: #6D28D9;
 }
 
+.arcade-game-card[data-card-theme="kitty"] {
+  border-color: #F472B6;
+}
+
+.arcade-game-card[data-card-theme="kitty"]:hover {
+  border-color: #DB2777;
+}
+
+.arcade-game-card[data-card-theme="kitty"] .arcade-buddy-thumb {
+  border-color: #EC4899;
+  background: #FDF2F8;
+}
+
+.arcade-game-card[data-card-theme="kitty"] .arcade-play-cta {
+  background: #DB2777;
+  border-bottom-color: #BE185D;
+}
+
 .arcade-empty-card {
   background: var(--bg-card);
   border: 2px dashed var(--border-strong);

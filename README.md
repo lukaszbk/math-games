@@ -1,6 +1,6 @@
 # Family Math Arcade
 
-A zero-build, static HTML/CSS/ES-module math arcade for elementary learners, featuring independent kid profiles, strict per-profile game assignment, five full games built on a shared XtraMath-style practice engine, synthesized Web Audio feedback, and a PIN-protected Parent Dashboard.
+A zero-build, static HTML/CSS/ES-module math arcade for elementary learners, featuring independent kid profiles, strict per-profile game assignment, six full games built on a shared XtraMath-style practice engine, synthesized Web Audio feedback, and a PIN-protected Parent Dashboard.
 
 ## Games Included
 
@@ -16,10 +16,15 @@ A zero-build, static HTML/CSS/ES-module math arcade for elementary learners, fea
    - **Negative money is a first-class quest:** the *Debt Duel* quest only ever generates debts below `$0`, so owing less is the better amount, and the guide explains it on a `−$600 … $0 … +$600` money line.
    - **The egg rule:** this game awards **1 ⭐ per first-try match** (via the optional `gameDef.calculateRoundStars` hook in the shared progression engine), so **ten correct choices fills an egg bar `10/10 ⭐` and hatches a dragon** — with a `+1 ⭐` Daily Mix courage bonus on top. 22 collectible Hoard Dragons (3 per quest + 3 for the Daily Mix) reuse the dragon portraits already in the repo.
    - Modes: **Daily Hoard Mix**, **Wallet Showdowns**, **Bill & Coin Stacks**, **Debt Duel (Negative $)**, **Earn & Spend Mix**, **Equal or Not?**, and **Dragon Market Stories**. New `hoard` theme (`css/tokens.css`) and `css/money.css` duel/bill/IOU styling; quest logic lives in `src/games/money-match/`.
-4. **Addition & Subtraction** (1st Grade — `#/game/addition-subtraction`, assigned to `grade1`)
+4. **Shape, Perimeter & Area** (3rd Grade — `#/game/superkitties-shapes`, assigned to `grade3`, *By Hanna BK*)
+   - Illustrated inline SVG geometry & measurement blueprints paired with 9 storybook cat companions led by **Kiki** across 4 squads (*Starlight Paws*, *Builder Paws*, *Shield & Laser Paws*, and *Kitty Family* — including the SuperKitties **Kiki**, **Meow-Meow**, **Cuzi**, **Cagura**, **Flame**, **Oliva**, **Cori**, and **Misha**, plus Cuzi’s mom **Anna**, who is not a SuperKitty herself and cheers everyone on from her sunny cottage window).
+   - **Visual blueprints & dual locks:** every puzzle includes a custom crisp inline SVG diagram — paw-tile grid rooms & courtyard fountain cutouts, glowing laser-fence perimeter polygons, 4-orientation L-shape castles with dotted rectangle splits and missing step walls, missing-side & dual Area+Perimeter vault locks (`multi_slot`), tappable side-by-side Hernado Watch blueprint comparisons (same Area/different Perimeter and vice versa), and quadrilateral/polygon shields marked with parallel chevrons, equal ticks, and `90°` corner boxes.
+   - **The Kitty Friend rule:** awards **1 ⭐ per first-try solve** (plus `+1 ⭐` Daily Patrol bonus for 8+ first-try solves), so **10 first-try solves unlocks a new Kitty friend** (`10/10 ⭐`). Features the cosmic berry-rose `kitty` theme (`css/tokens.css`, `css/shapes.css`), `relaxed` untimed default pace, and prompt read-aloud (`🔊 Read`).
+   - Modes: **SuperKitties Daily Patrol**, **Paw-Tile Rooms & Gardens**, **Laser-Fence Perimeter**, **L-Shape Hero Castles**, **Mystery Side Vaults**, **Hernado Watch**, and **Shape & Shield Academy**.
+5. **Addition & Subtraction** (1st Grade — `#/game/addition-subtraction`, assigned to `grade1`)
    - Built around i-Ready Grade 1 mental-math strategies (*Teen Numbers as 10 and Some More*, *Make a Ten to Add*, *Use a Ten to Subtract*) with a warm storybook Meadow theme, `relaxed` untimed default pace, optional `🔊 Read` prompt speech synthesis, visual number-path jump arcs, counter-slide / break-apart bonds, interactive **20-Frame Counters**, and 29 collectible Dog Man & Supa Buddies companions.
    - Modes: **Supa Buddies Daily Mix**, **Teen Numbers & Friends of 10**, **Make a Ten to Add**, **Use a Ten to Subtract**, **Doubles & Near-Doubles**, **Fluency Within 10**, and **Fact Families & Balance**.
-5. **100-Chart Cross Puzzles** (1st Grade — `#/game/hundreds-chart`, assigned to `grade1`)
+6. **100-Chart Cross Puzzles** (1st Grade — `#/game/hundreds-chart`, assigned to `grade1`)
    - Built around i-Ready Grade 1 Lesson 14C (*"Finish the Puzzle"* — 100-chart & 120-chart cross cutouts) with a sunlit Sky theme, multi-box cross input with partial progress lock-in, interactive 1–100 / 1–120 chart peek with clue highlighting and cross spotlighting, and 29 collectible Dog Man & Supa Buddies Chart Detectives led by Cat Kid.
    - Modes: **Supa Chart Daily Mix**, **10 Less, 10 More & ±1 Hops**, **Center-Clue Crosses**, **Two-Clue Crosses (Find Middle!)**, **One-Clue Cross Detective**, **Chart Windows & Oops Detective**, and **Beyond 100: The 120-Chart!**.
 
@@ -35,7 +40,7 @@ Then open `http://localhost:8080/` in your browser. All paths are relative (`./c
 
 ## Kid Profiles & Legacy Save Migration
 
-- Default profiles: **3rd Grader** (`🐉`, `grade3` → *Factors & Multiples*, *Multiplication Facts*, and *Money Match: Dragon Hoard Duel*) and **1st Grader** (`🐶`, `grade1` → *Addition & Subtraction* and *100-Chart Cross Puzzles*), stored under `localStorage['math_arcade_save_v1']`.
+- Default profiles: **3rd Grader** (`🐉`, `grade3` → *Factors & Multiples*, *Multiplication Facts*, *Money Match: Dragon Hoard Duel*, and *Shape, Perimeter & Area*) and **1st Grader** (`🐶`, `grade1` → *Addition & Subtraction* and *100-Chart Cross Puzzles*), stored under `localStorage['math_arcade_save_v1']`.
 - Automatic non-destructive migrations:
   - `localStorage['wings_of_math_save_v1']` migrates into `grade3`’s `factors-and-multiples` save.
   - Existing `math_arcade_save_v1` saves keyed under `primes-and-factors` migrate automatically into `factors-and-multiples`.

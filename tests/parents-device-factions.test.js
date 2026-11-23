@@ -5,6 +5,7 @@ import { GAMES } from '../src/games/registry.js';
 import { FACTORS_AND_MULTIPLES_GAME } from '../src/games/factors-and-multiples/index.js';
 import { MULTIPLICATION_FACTS_GAME } from '../src/games/multiplication-facts/index.js';
 import { MONEY_MATCH_GAME } from '../src/games/money-match/index.js';
+import { SUPERKITTIES_SHAPES_GAME } from '../src/games/superkitties-shapes/index.js';
 import { ADDITION_SUBTRACTION_GAME } from '../src/games/addition-subtraction/index.js';
 import { HUNDREDS_CHART_GAME } from '../src/games/hundreds-chart/index.js';
 import {
@@ -152,7 +153,7 @@ test('Device settings normalize, persist, toggle packs, and remain isolated from
   assert.deepEqual(loadDeviceSettings(GAMES, storage), { version: 1, disabledGameIds: ['money-match'] });
 });
 
-test('Faction parsing and extraction covers all 5 games including hybrids and Multiplication Facts', () => {
+test('Faction parsing and extraction covers all 6 games including hybrids and Multiplication Facts', () => {
   assert.deepEqual(parseCompanionFactions('MudWing'), ['MudWing']);
   assert.deepEqual(parseCompanionFactions('NightWing • IceWing'), ['NightWing', 'IceWing']);
   assert.deepEqual(parseCompanionFactions('Robots & Tech'), ['Robots & Tech']);
@@ -188,6 +189,8 @@ test('Faction parsing and extraction covers all 5 games including hybrids and Mu
   assert.ok(factorsRain.some(d => d.id === '25_peacemaker'));
 
   assert.equal(filterCompanionsByFaction(MONEY_MATCH_GAME.companions, 'All').length, 22);
+  assert.equal(filterCompanionsByFaction(SUPERKITTIES_SHAPES_GAME.companions, 'Starlight Paws').length, 3);
+  assert.equal(filterCompanionsByFaction(SUPERKITTIES_SHAPES_GAME.companions, 'Kitty Family').length, 2);
   assert.equal(filterCompanionsByFaction(ADDITION_SUBTRACTION_GAME.companions, 'Robots & Tech').length, 4);
   assert.equal(filterCompanionsByFaction(HUNDREDS_CHART_GAME.companions, 'Supa Cops').length, 4);
 });
@@ -196,21 +199,24 @@ test('renderArcadeView hides disabled game packs and shows empty-state card when
   const family = createDefaultFamilyState(GAMES);
   const container = { innerHTML: '' };
 
-  // Default Arcade view shows Money Match author credit
+  // Default Arcade view shows Money Match and Shape, Perimeter & Area author credits
   renderArcadeView({ container, familyState: family, games: GAMES });
   assert.ok(container.innerHTML.includes('By Ada Guzhu'));
+  assert.ok(container.innerHTML.includes('By Hanna BK'));
 
   // Disable one grade3 game
   const oneDisabled = setGamePackEnabled(createDefaultDeviceSettings(), 'money-match', false, GAMES);
   renderArcadeView({ container, familyState: family, games: GAMES, deviceSettings: oneDisabled });
   assert.ok(container.innerHTML.includes('data-game-id="factors-and-multiples"'));
   assert.ok(container.innerHTML.includes('data-game-id="multiplication-facts"'));
+  assert.ok(container.innerHTML.includes('data-game-id="superkitties-shapes"'));
   assert.equal(container.innerHTML.includes('data-game-id="money-match"'), false);
   assert.equal(container.innerHTML.includes('arcade-empty-card'), false);
 
   // Disable all grade3 games -> shows empty state for 3rd Grader
   let allGrade3Disabled = setGamePackEnabled(oneDisabled, 'factors-and-multiples', false, GAMES);
   allGrade3Disabled = setGamePackEnabled(allGrade3Disabled, 'multiplication-facts', false, GAMES);
+  allGrade3Disabled = setGamePackEnabled(allGrade3Disabled, 'superkitties-shapes', false, GAMES);
   renderArcadeView({ container, familyState: family, games: GAMES, deviceSettings: allGrade3Disabled });
   assert.ok(container.innerHTML.includes('class="arcade-empty-card"'));
   assert.ok(container.innerHTML.includes('No game packs enabled on this device'));
@@ -264,8 +270,8 @@ test('Parent controller manages per-device game packs, blocks disabled mode laun
   assert.ok(container.innerHTML.includes('id="parent-kid-profile-section"'));
   assert.ok(container.innerHTML.includes('id="parent-game-pack-section"'));
   assert.ok(container.innerHTML.includes('id="parent-device-packs"'));
-  assert.ok(container.innerHTML.includes('3 / 3 Enabled'));
-  assert.ok(container.innerHTML.includes('3/3 on'));
+  assert.ok(container.innerHTML.includes('4 / 4 Enabled'));
+  assert.ok(container.innerHTML.includes('4/4 on'));
   assert.ok(container.innerHTML.includes('2/2 on'));
   assert.ok(container.innerHTML.includes('id="parent-faction-filters"'));
   assert.ok(container.innerHTML.includes('class="pack-switch-btn is-on"'));
@@ -288,10 +294,11 @@ test('Parent controller manages per-device game packs, blocks disabled mode laun
   assert.equal(kidSectionBeforeGame.includes('id="parent-family-backup"'), false);
   assert.equal(kidSectionBeforeGame.includes('parent-game-menu'), false);
 
-  // Kid's Device Packs shows only grade3's 3 packs
+  // Kid's Device Packs shows only grade3's 4 packs
   assert.ok(kidSectionBeforeGame.includes('btn-parent-pack-factors-and-multiples'));
   assert.ok(kidSectionBeforeGame.includes('btn-parent-pack-multiplication-facts'));
   assert.ok(kidSectionBeforeGame.includes('btn-parent-pack-money-match'));
+  assert.ok(kidSectionBeforeGame.includes('btn-parent-pack-superkitties-shapes'));
   assert.equal(kidSectionBeforeGame.includes('btn-parent-pack-addition-subtraction'), false);
   assert.equal(kidSectionBeforeGame.includes('btn-parent-pack-hundreds-chart'), false);
 
@@ -309,8 +316,8 @@ test('Parent controller manages per-device game packs, blocks disabled mode laun
   controller.handleAction(makeActionEl('parent-toggle-game-pack', { gameId: 'factors-and-multiples' }), rerender);
   assert.equal(deviceSaves, 1);
   assert.equal(isGamePackEnabled(deviceSettings, 'factors-and-multiples'), false);
-  assert.ok(container.innerHTML.includes('2 / 3 Enabled'));
-  assert.ok(container.innerHTML.includes('2/3 on'));
+  assert.ok(container.innerHTML.includes('3 / 4 Enabled'));
+  assert.ok(container.innerHTML.includes('3/4 on'));
   assert.ok(container.innerHTML.includes('id="btn-parent-enable-profile-packs"'));
   assert.equal(container.innerHTML.includes('id="btn-parent-enable-all-packs"'), false);
   assert.ok(container.innerHTML.includes('class="pack-switch-btn is-off"'));
@@ -331,7 +338,7 @@ test('Parent controller manages per-device game packs, blocks disabled mode laun
   assert.equal(container.innerHTML.includes('btn-parent-pack-factors-and-multiples'), false);
   assert.equal(container.innerHTML.includes('id="btn-parent-enable-profile-packs"'), false);
   assert.ok(container.innerHTML.includes('id="btn-parent-enable-all-packs"'));
-  assert.ok(container.innerHTML.includes('Enable All Arcade Packs (4/5)'));
+  assert.ok(container.innerHTML.includes('Enable All Arcade Packs (5/6)'));
 
   // Disable one grade1 pack, then re-enable only grade1 packs -> grade3 pack remains disabled
   controller.handleAction(makeActionEl('parent-toggle-game-pack', { gameId: 'addition-subtraction' }), rerender);
@@ -339,7 +346,7 @@ test('Parent controller manages per-device game packs, blocks disabled mode laun
   assert.ok(container.innerHTML.includes('1 / 2 Enabled'));
   assert.ok(container.innerHTML.includes('1/2 on'));
   assert.ok(container.innerHTML.includes('id="btn-parent-enable-profile-packs"'));
-  assert.ok(container.innerHTML.includes('Enable All Arcade Packs (3/5)'));
+  assert.ok(container.innerHTML.includes('Enable All Arcade Packs (4/6)'));
 
   controller.handleAction(makeActionEl('parent-enable-profile-packs'), rerender);
   assert.equal(deviceSaves, 3);
@@ -347,7 +354,7 @@ test('Parent controller manages per-device game packs, blocks disabled mode laun
   assert.equal(isGamePackEnabled(deviceSettings, 'hundreds-chart'), true);
   assert.equal(isGamePackEnabled(deviceSettings, 'factors-and-multiples'), false);
   assert.ok(container.innerHTML.includes('2 / 2 Enabled'));
-  assert.ok(container.innerHTML.includes('Enable All Arcade Packs (4/5)'));
+  assert.ok(container.innerHTML.includes('Enable All Arcade Packs (5/6)'));
 
   // Enable all Arcade packs across all profiles, then switch back to grade3
   controller.handleAction(makeActionEl('parent-enable-all-packs'), rerender);
@@ -356,7 +363,7 @@ test('Parent controller manages per-device game packs, blocks disabled mode laun
   assert.equal(container.innerHTML.includes('id="btn-parent-enable-all-packs"'), false);
 
   controller.handleAction(makeActionEl('parent-select-profile', { profileId: 'grade3' }), rerender);
-  assert.ok(container.innerHTML.includes('3 / 3 Enabled'));
+  assert.ok(container.innerHTML.includes('4 / 4 Enabled'));
   assert.equal(container.innerHTML.includes('device-disabled-banner'), false);
 
   // Starting a mode works once enabled
@@ -430,11 +437,11 @@ test('Parent controller and Arcade view self-contained device settings fallback 
 
     const rerender = () => controller.render(container, { showContextHeader: true });
     unlockControllerWithPin(controller, container, rerender);
-    assert.ok(container.innerHTML.includes('3 / 3 Enabled'));
+    assert.ok(container.innerHTML.includes('4 / 4 Enabled'));
 
     // Toggle without wired callbacks -> must persist via fallback storage, never no-op
     controller.handleAction(makeActionEl('parent-toggle-game-pack', { gameId: 'money-match' }), rerender);
-    assert.ok(container.innerHTML.includes('2 / 3 Enabled'));
+    assert.ok(container.innerHTML.includes('3 / 4 Enabled'));
     assert.deepEqual(loadDeviceSettings(GAMES, storage), {
       version: 1,
       disabledGameIds: ['money-match']
@@ -448,7 +455,7 @@ test('Parent controller and Arcade view self-contained device settings fallback 
 
     // Enable profile packs via fallback
     controller.handleAction(makeActionEl('parent-enable-profile-packs'), rerender);
-    assert.ok(container.innerHTML.includes('3 / 3 Enabled'));
+    assert.ok(container.innerHTML.includes('4 / 4 Enabled'));
     assert.deepEqual(loadDeviceSettings(GAMES, storage), {
       version: 1,
       disabledGameIds: []

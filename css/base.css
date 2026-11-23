@@ -41,6 +41,13 @@ body[data-theme="hoard"] {
     radial-gradient(circle at 50% 92%, rgba(217, 119, 6, 0.08) 0%, transparent 45%);
 }
 
+body[data-theme="kitty"] {
+  background-image:
+    radial-gradient(circle at 12% 8%, rgba(236, 72, 153, 0.14) 0%, transparent 40%),
+    radial-gradient(circle at 88% 14%, rgba(168, 85, 247, 0.11) 0%, transparent 42%),
+    radial-gradient(circle at 50% 92%, rgba(245, 158, 11, 0.08) 0%, transparent 45%);
+}
+
 button {
   font-family: inherit;
   cursor: pointer;

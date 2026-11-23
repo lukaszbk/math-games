@@ -240,6 +240,11 @@ body[data-theme="hoard"] .featured-mix-banner {
   box-shadow: 0 10px 24px rgba(109, 40, 217, 0.24);
 }
 
+body[data-theme="kitty"] .featured-mix-banner {
+  background: linear-gradient(135deg, #9D174D 0%, #BE185D 55%, #DB2777 100%);
+  box-shadow: 0 10px 24px rgba(190, 24, 93, 0.24);
+}
+
 .featured-mix-banner:hover {
   transform: translateY(-2px);
   box-shadow: 0 14px 28px rgba(15, 118, 110, 0.28);
