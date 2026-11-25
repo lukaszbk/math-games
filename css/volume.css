@@ -1,0 +1,407 @@
+/* ============================================================
+   Meow Training — Volume, Magic Wand, Cat Shadows & Story Dojo
+   ============================================================ */
+
+/* ================= MAGIC WAND UNLOCK POD ================= */
+.magic-wand-pod {
+  width: 220px;
+  min-height: 186px;
+  margin: 10px auto 14px;
+  padding: 12px;
+  border-radius: 28px;
+  background: radial-gradient(circle at 50% 42%, #F0FDFA 0%, #D7F3F7 48%, #BFE0E6 100%);
+  border: 3.5px solid #FBBF24;
+  box-shadow:
+    0 0 32px rgba(25, 150, 176, 0.38),
+    0 0 18px rgba(251, 191, 36, 0.42),
+    inset 0 0 18px rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  animation: wandFloat 1.6s ease-in-out infinite;
+}
+
+.magic-wand-pod svg {
+  width: 100%;
+  height: auto;
+  max-width: 196px;
+  max-height: 162px;
+  display: block;
+}
+
+@keyframes wandFloat {
+  0%, 100% { transform: translateY(0) rotate(-1.5deg) scale(1); }
+  50% { transform: translateY(-6px) rotate(2deg) scale(1.03); }
+}
+
+.unlock-extra-banner {
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #EDFAFC 0%, #FEF3C7 100%);
+  border: 2px solid #F59E0B;
+  color: #0E6478;
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.unlock-extra-banner.is-victory {
+  background: linear-gradient(135deg, #FEF3C7 0%, #D1FAE5 55%, #D7F3F7 100%);
+  border: 3px solid #D97706;
+  color: #064E3B;
+  font-size: 1.08rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  box-shadow: 0 8px 22px rgba(217, 119, 6, 0.25);
+}
+
+/* ================= CAT SHADOW & SEAL SILHOUETTES ================= */
+.next-dragon-peek.has-shadow-svg {
+  border-color: #1996B0;
+  background: linear-gradient(160deg, #0D2938 0%, #16485E 100%);
+}
+
+.next-dragon-peek .cat-shadow-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  filter: none;
+  opacity: 1;
+}
+
+.dragon-portrait-box.has-shadow-svg {
+  background: linear-gradient(165deg, #0C2534 0%, #164458 60%, #1D5E74 100%);
+  border-color: #8CC4CF;
+}
+
+.dragon-portrait-box .cat-shadow-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  filter: none;
+  opacity: 1;
+}
+
+.lock-overlay.shadow-overlay {
+  background: linear-gradient(180deg, rgba(12, 37, 52, 0.05) 0%, rgba(12, 37, 52, 0.56) 100%);
+  justify-content: flex-end;
+  padding-bottom: 10px;
+}
+
+.prize-kind-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  background: #EDFAFC;
+  color: #0E6478;
+  border: 1px solid #8CC4CF;
+}
+
+/* ================= GRAND VICTORY BANNER & 3-CAT STORY TRACK ================= */
+.meow-victory-banner {
+  background: linear-gradient(135deg, #FFFBEB 0%, #D1FAE5 50%, #D7F3F7 100%);
+  border: 3px solid #F59E0B;
+  border-bottom-width: 6px;
+  border-radius: var(--radius-xl);
+  padding: 20px 24px;
+  margin-bottom: 18px;
+  box-shadow: 0 12px 30px rgba(14, 100, 120, 0.16);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.meow-victory-title {
+  margin: 0;
+  font-size: clamp(1.3rem, 2.5vw, 1.75rem);
+  font-weight: 900;
+  color: #064E3B;
+  letter-spacing: 0.01em;
+}
+
+.meow-victory-sub {
+  margin: 4px 0 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #0E6478;
+}
+
+.meow-story-track {
+  background: var(--bg-card);
+  border: 2px solid var(--border-warm);
+  border-radius: var(--radius-xl);
+  padding: 14px 16px;
+  margin-bottom: 18px;
+  box-shadow: var(--shadow-sm);
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.meow-track-stage {
+  background: var(--bg-subtle);
+  border: 2px solid var(--border-warm);
+  border-radius: 16px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: center;
+}
+
+.meow-track-stage.unlocked {
+  background: #EDFAFC;
+  border-color: #1996B0;
+}
+
+.meow-track-stage.complete {
+  background: linear-gradient(180deg, #FFFBEB 0%, #ECFDF5 100%);
+  border-color: #F59E0B;
+}
+
+.meow-track-title {
+  font-size: 0.88rem;
+  font-weight: 900;
+  color: var(--ink-900);
+}
+
+.meow-track-meta {
+  font-size: 0.77rem;
+  font-weight: 800;
+  color: var(--jade-700);
+}
+
+.meow-track-sub {
+  font-size: 0.73rem;
+  font-weight: 600;
+  color: var(--ink-500);
+}
+
+/* ================= VOLUME QUESTION STAGE & 3D SVG LAYOUTS ================= */
+.vol-goal-banner {
+  max-width: 640px;
+  margin: 0 auto 4px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.86rem;
+  font-weight: 900;
+  text-align: center;
+  border: 2px solid #8CC4CF;
+  background: linear-gradient(100deg, #D7F3F7, #FEF3C7);
+  color: #0E6478;
+}
+
+.vol-svg {
+  width: 100%;
+  max-width: 380px;
+  height: auto;
+  max-height: 225px;
+  display: block;
+  margin: 2px auto;
+}
+
+.vol-svg.compact {
+  max-width: 220px;
+  max-height: 145px;
+}
+
+.vol-answer-bar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+  padding: 8px 14px;
+  border-radius: 16px;
+  background: var(--bg-subtle);
+  border: 2px solid var(--border-warm);
+}
+
+.vol-answer-lbl {
+  font-size: 1.06rem;
+  font-weight: 900;
+  color: var(--ink-900);
+}
+
+.vol-unit-pill {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--jade-700);
+  background: var(--jade-100);
+  border: 1.5px solid var(--jade-500);
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.vol-twin-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.vol-legend-chip {
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1.5px solid var(--border-strong);
+  background: #FFFFFF;
+}
+
+.vol-legend-chip.box-a {
+  background: #D7F3F7;
+  border-color: #0E6478;
+  color: #0E6478;
+}
+
+.vol-legend-chip.box-b {
+  background: #FEF3C7;
+  border-color: #D97706;
+  color: #92400E;
+}
+
+/* Tank Rivals Side-by-Side Duel */
+.vol-duel-grid {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: stretch;
+  gap: 10px;
+  width: 100%;
+  max-width: 680px;
+  margin: 2px auto 0;
+}
+
+.vol-duel-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 10px;
+  border-radius: var(--radius-lg);
+  border: 3px solid var(--border-strong);
+  background: linear-gradient(160deg, #FFFFFF 0%, var(--bg-subtle) 100%);
+  box-shadow: var(--shadow-md);
+  color: var(--ink-900);
+  transition: transform 0.12s ease, border-color 0.12s ease;
+}
+
+.vol-duel-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--jade-500);
+}
+
+.vol-duel-card.correct {
+  background: var(--jade-100);
+  border-color: var(--jade-600);
+  color: var(--jade-700);
+}
+
+.vol-duel-card.wrong {
+  background: var(--ember-100);
+  border-color: var(--ember-500);
+  color: var(--ember-600);
+}
+
+.vol-duel-tag {
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--jade-700);
+  background: var(--jade-100);
+  padding: 2px 10px;
+  border-radius: 999px;
+}
+
+.vol-duel-sub {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--ink-700);
+}
+
+.vol-duel-pick {
+  font-size: 0.72rem;
+  font-weight: 900;
+  color: var(--gold-700);
+  background: var(--gold-100);
+  border-radius: 999px;
+  padding: 3px 10px;
+}
+
+.vol-duel-vs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vol-duel-vs span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--gold-500);
+  color: #FFFFFF;
+  font-size: 0.88rem;
+  font-weight: 900;
+  box-shadow: var(--shadow-sm);
+}
+
+/* Guide Split Layout */
+.vol-guide-split {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.vol-guide-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+  margin: 4px 0;
+}
+
+@media (max-width: 780px) {
+  .meow-story-track {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .vol-duel-grid {
+    grid-template-columns: 1fr;
+  }
+  .vol-duel-vs span {
+    width: 36px;
+    height: 36px;
+    font-size: 0.78rem;
+  }
+  .vol-guide-split {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .vol-svg {
+    max-height: 185px;
+  }
+  .meow-story-track {
+    grid-template-columns: 1fr;
+  }
+}

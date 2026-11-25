@@ -4,15 +4,16 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Family Math Arcade</title>
-  <meta name="description" content="Zero-build interactive math games for elementary learners: Factors & Multiples, Multiplication Facts, Money Match: Dragon Hoard Duel, and Shape, Perimeter & Area (3rd Grade), plus Addition & Subtraction and 100-Chart Cross Puzzles (1st Grade) with collectible buddies." />
-  <link rel="stylesheet" href="./css/tokens.css?v=6" />
-  <link rel="stylesheet" href="./css/base.css?v=6" />
-  <link rel="stylesheet" href="./css/arcade.css?v=6" />
-  <link rel="stylesheet" href="./css/game-shell.css?v=6" />
-  <link rel="stylesheet" href="./css/arena.css?v=6" />
-  <link rel="stylesheet" href="./css/money.css?v=6" />
-  <link rel="stylesheet" href="./css/shapes.css?v=6" />
-  <link rel="stylesheet" href="./css/parents.css?v=6" />
+  <meta name="description" content="Zero-build interactive math games for elementary learners: Factors & Multiples, Multiplication Facts, Money Match: Dragon Hoard Duel, Shape, Perimeter & Area, and Meow Training (3rd Grade), plus Addition & Subtraction and 100-Chart Cross Puzzles (1st Grade) with collectible buddies." />
+  <link rel="stylesheet" href="./css/tokens.css?v=7" />
+  <link rel="stylesheet" href="./css/base.css?v=7" />
+  <link rel="stylesheet" href="./css/arcade.css?v=7" />
+  <link rel="stylesheet" href="./css/game-shell.css?v=7" />
+  <link rel="stylesheet" href="./css/arena.css?v=7" />
+  <link rel="stylesheet" href="./css/money.css?v=7" />
+  <link rel="stylesheet" href="./css/shapes.css?v=7" />
+  <link rel="stylesheet" href="./css/volume.css?v=7" />
+  <link rel="stylesheet" href="./css/parents.css?v=7" />
 </head>
 <body data-theme="parchment">
 
@@ -112,7 +113,8 @@
           <img id="unlock-dragon-img" src="" alt="Newly Unlocked Companion" />
         </div>
         <p id="unlock-dragon-bio" style="font-size:0.96rem; color:var(--ink-700); font-weight:600; margin:0 0 8px;"></p>
-        <p id="unlock-dragon-quote" style="font-size:0.9rem; color:var(--jade-700); font-style:italic; font-weight:700; margin:0 0 18px;"></p>
+        <p id="unlock-dragon-quote" style="font-size:0.9rem; color:var(--jade-700); font-style:italic; font-weight:700; margin:0 0 14px;"></p>
+        <div id="unlock-extra-banner" class="unlock-extra-banner hidden"></div>
         <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
           <button type="button" class="secondary-action-btn" data-action="close-unlock-modal" data-make-buddy="false">Keep Current Buddy</button>
           <button type="button" id="btn-unlock-make-buddy" class="primary-action-btn" data-action="close-unlock-modal" data-make-buddy="true">🐉 Make My Study Buddy!</button>
@@ -140,6 +142,6 @@
     </div>
   </div>
 
-  <script type="module" src="./src/main.js?v=6"></script>
+  <script type="module" src="./src/main.js?v=7"></script>
 </body>
 </html>

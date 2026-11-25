@@ -1,5 +1,6 @@
 import { GAMES, getGameById } from './games/registry.js';
 import { SFX, setSoundEnabled } from './shared/audio.js';
+import { resolveStudyBuddyId } from './shared/progression.js';
 import {
   getActiveProfile,
   getGameSave,
@@ -9,10 +10,10 @@ import {
   saveDeviceSettings,
   saveFamilyState
 } from './shared/storage.js';
-import { renderArcadeView } from './shared/views/arcade-view.js?v=6';
-import { renderGameHubShell } from './shared/views/game-hub-view.js?v=6';
-import { createArenaController } from './shared/views/arena-view.js';
-import { createParentsController } from './shared/views/parents-view.js?v=6';
+import { renderArcadeView } from './shared/views/arcade-view.js?v=7';
+import { renderGameHubShell } from './shared/views/game-hub-view.js?v=7';
+import { createArenaController } from './shared/views/arena-view.js?v=7';
+import { createParentsController } from './shared/views/parents-view.js?v=7';
 
 let familyState = loadFamilyState(GAMES);
 let deviceSettings = loadDeviceSettings(GAMES);
@@ -368,10 +369,10 @@ function handleDocumentClick(e) {
       e.stopPropagation();
       const { gameDef, gameSave } = getActiveContext();
       const cid = actionEl.dataset.companionId;
-      const comp = gameDef.companions.find(c => c.id === cid);
-      if (comp && gameSave.unlockedDragons.includes(cid)) {
+      const targetId = resolveStudyBuddyId(gameSave, gameDef, cid);
+      if (targetId) {
         SFX.correct(false);
-        gameSave.activeBuddyId = cid;
+        gameSave.activeBuddyId = targetId;
         persistFamily();
         renderCurrentView();
       }

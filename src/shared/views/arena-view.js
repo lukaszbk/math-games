@@ -10,7 +10,10 @@ import {
   getModeCompanions,
   getModeMeta,
   getNextCompanionSpotlight,
-  isCompanionUnlocked
+  getNextSequentialPrize,
+  getUnlockedCompanions,
+  isCompanionUnlocked,
+  resolveStudyBuddyId
 } from '../progression.js';
 import {
   createRoundState,
@@ -567,7 +570,7 @@ export function createArenaController({
   }
 
   function showNextUnlockModal() {
-    const { gameDef } = getContext();
+    const { gameDef, gameSave } = getContext();
     if (pendingUnlocks.length === 0) {
       modalResultsEl.classList.remove('hidden');
       return;
@@ -575,6 +578,7 @@ export function createArenaController({
     const companion = pendingUnlocks[0];
     const modeMeta = getModeMeta(gameDef, companion.modeId);
     const isColossal = Boolean(companion.isColossal);
+    const isWand = gameDef.unlockPodType === 'wand';
     SFX.roundFanfare();
 
     const unlockCard = modalUnlockEl.querySelector('.modal-card');
@@ -582,34 +586,93 @@ export function createArenaController({
 
     const milestoneEl = document.getElementById('unlock-milestone-kicker');
     if (milestoneEl) {
-      milestoneEl.textContent = isColossal
-        ? '👑 100 FACTS IN 5 MINUTES CONQUERED! 👑'
-        : '🌟 10-Star Milestone Reached! 🌟';
+      if (isColossal) {
+        milestoneEl.textContent = '👑 100 FACTS IN 5 MINUTES CONQUERED! 👑';
+      } else if (isWand && companion.isAutoMilestone) {
+        milestoneEl.textContent = '🌟 Full Crew Trained — Bonus Cat Awakens! 🌟';
+      } else if (isWand) {
+        milestoneEl.textContent = '🌟 10-Star Wand Milestone Reached! 🌟';
+      } else {
+        milestoneEl.textContent = '🌟 10-Star Milestone Reached! 🌟';
+      }
     }
     const tapPromptEl = document.getElementById('unlock-tap-prompt');
     if (tapPromptEl) {
-      tapPromptEl.textContent = isColossal
-        ? '👆 Tap the ancient animus scroll to awaken King Darkstalker!'
-        : '👆 Tap the glowing egg to hatch your new friend!';
+      if (isColossal) {
+        tapPromptEl.textContent = '👆 Tap the ancient animus scroll to awaken King Darkstalker!';
+      } else if (isWand) {
+        tapPromptEl.textContent = companion.isCat
+          ? '👆 Tap the glowing magic wand to reveal your new cat!'
+          : '👆 Tap the glowing magic wand to cast your unlock spell!';
+      } else {
+        tapPromptEl.textContent = '👆 Tap the glowing egg to hatch your new friend!';
+      }
     }
 
     document.getElementById('egg-tribe-hint').textContent = isColossal
       ? `${companion.scaleLabel || companion.tribe} • ${companion.tribe}`
-      : `${companion.tribe} • ${modeMeta.icon} ${modeMeta.title}`;
-    document.getElementById('unlock-heading').textContent = gameDef.unlockHeading || `A ${gameDef.companionNoun} Egg Is Hatching!`;
+      : (isWand
+        ? `${companion.tribe} • ${companion.isAutoMilestone ? 'Auto-Unlocked!' : (companion.kind || modeMeta.title)}`
+        : `${companion.tribe} • ${modeMeta.icon} ${modeMeta.title}`);
+    document.getElementById('unlock-heading').textContent = isWand
+      ? (companion.isCat ? '🪄 A Mystery Cat Shadow Appears!' : (gameDef.unlockHeading || '🪄 Wave the Magic Training Wand!'))
+      : (gameDef.unlockHeading || `A ${gameDef.companionNoun} Egg Is Hatching!`);
+
     const podEl = document.getElementById('unlock-pod-emoji');
-    if (podEl) podEl.textContent = gameDef.unlockPodEmoji || '✨';
+    if (podEl) {
+      podEl.className = isWand ? 'magic-wand-pod' : 'dragon-egg-btn';
+      if (isWand && typeof gameDef.renderUnlockPodHTML === 'function') {
+        podEl.innerHTML = gameDef.renderUnlockPodHTML(companion);
+      } else {
+        podEl.textContent = gameDef.unlockPodEmoji || '✨';
+      }
+    }
+
     document.getElementById('unlock-reveal-kicker').textContent = isColossal
       ? '👑 Colossal Grand Champion Awakened! 👑'
-      : `✨ New ${gameDef.companionNoun} Unlocked! ✨`;
+      : (isWand
+        ? (companion.isCat ? '✨ New Hero Cat Joined! ✨' : `✨ New ${companion.kind || 'Prize'} Unlocked! ✨`)
+        : `✨ New ${gameDef.companionNoun} Unlocked! ✨`);
     document.getElementById('unlock-dragon-name').textContent = companion.name;
     document.getElementById('unlock-dragon-tribe').textContent = isColossal
       ? `${companion.scaleLabel || companion.tribe} • ${companion.tribe}`
-      : `${companion.tribe} • ${modeMeta.title}`;
+      : (isWand ? `${companion.tribe}${companion.kind ? ` • ${companion.kind}` : ''}` : `${companion.tribe} • ${modeMeta.title}`);
     document.getElementById('unlock-dragon-img').src = companion.image;
     document.getElementById('unlock-dragon-bio').textContent = companion.bio;
     document.getElementById('unlock-dragon-quote').textContent = `"${companion.quotes[0]}"`;
-    document.getElementById('btn-unlock-make-buddy').textContent = `${gameDef.companionEmoji} Make My Study Buddy!`;
+
+    const extraBanner = document.getElementById('unlock-extra-banner');
+    if (extraBanner) {
+      const allDone = Boolean(
+        gameDef.victoryBannerText &&
+        pendingUnlocks.length === 1 &&
+        getUnlockedCompanions(gameSave, gameDef).length >= gameDef.companions.length
+      );
+      const gift = companion.starterGiftId
+        ? gameDef.companions.find(c => c.id === companion.starterGiftId)
+        : null;
+      if (allDone) {
+        extraBanner.className = 'unlock-extra-banner is-victory';
+        extraBanner.textContent = `👑 ${gameDef.victoryBannerText} 👑`;
+      } else if (gift) {
+        extraBanner.className = 'unlock-extra-banner';
+        extraBanner.textContent = `🎁 Starting ${gift.kind || 'Power'} Unlocked Too: ${gift.name}!`;
+      } else {
+        extraBanner.className = 'unlock-extra-banner hidden';
+        extraBanner.textContent = '';
+      }
+    }
+
+    const makeBuddyBtn = document.getElementById('btn-unlock-make-buddy');
+    if (makeBuddyBtn) {
+      if (gameDef.onlyCatsAsBuddy) {
+        makeBuddyBtn.textContent = companion.isCat
+          ? `🐱 Make ${companion.name} My Study Buddy!`
+          : `🐱 Train with ${companion.ownerCatName || 'Crew'}!`;
+      } else {
+        makeBuddyBtn.textContent = `${gameDef.companionEmoji} Make My Study Buddy!`;
+      }
+    }
 
     document.getElementById('unlock-egg-step').classList.remove('hidden');
     document.getElementById('unlock-reveal-step').classList.add('hidden');
@@ -776,26 +839,39 @@ export function createArenaController({
     `;
 
     const modeMeta = getModeMeta(gameDef, modeId);
-    const nextInMode = getModeCompanions(gameDef, modeId).find(c => !isCompanionUnlocked(gameSave, c.id));
     const fillEl = document.getElementById('results-progress-fill');
     const capEl = document.getElementById('results-progress-caption');
     const suggestWrap = document.getElementById('results-suggest-wrap');
 
-    if (nextInMode) {
-      const bank = gameSave.modeBank[modeId] || 0;
-      fillEl.style.width = (bank * 10) + '%';
-      capEl.textContent = `${10 - bank} more ⭐ in ${modeMeta.shortTitle} to unlock ${nextInMode.name} (${nextInMode.tribe})!`;
+    if (gameDef.progressionType === 'sequential') {
+      const nextPrize = getNextSequentialPrize(gameSave, gameDef);
+      if (nextPrize) {
+        const bank = gameSave.trainingBank || 0;
+        fillEl.style.width = (bank * 10) + '%';
+        capEl.textContent = `${10 - bank} more ⭐ with the Magic Wand to unlock ${nextPrize.name}!`;
+      } else {
+        fillEl.style.width = '100%';
+        capEl.textContent = `👑 ${gameDef.victoryBannerText || `All ${gameDef.companions.length} ${gameDef.companionNounPlural} Unlocked!`}`;
+      }
       suggestWrap.innerHTML = '';
     } else {
-      fillEl.style.width = '100%';
-      const suggested = getNextCompanionSpotlight(gameSave, gameDef, modeId);
-      if (suggested) {
-        const sugMeta = getModeMeta(gameDef, suggested.modeId);
-        capEl.textContent = `🎉 All ${gameDef.companionNounPluralLower} in ${modeMeta.title} unlocked!`;
-        suggestWrap.innerHTML = `<button type="button" id="btn-results-suggest-mode" class="suggest-mode-btn" data-action="play-suggested-mode" data-mode-id="${escapeHtml(suggested.modeId)}">🥚 Unlock ${escapeHtml(gameDef.companionNounPlural)} in ${escapeHtml(sugMeta.shortTitle)} →</button>`;
-      } else {
-        capEl.textContent = `🎉 All ${gameDef.companions.length} ${gameDef.companionNounPlural} Unlocked!`;
+      const nextInMode = getModeCompanions(gameDef, modeId).find(c => !isCompanionUnlocked(gameSave, c.id));
+      if (nextInMode) {
+        const bank = gameSave.modeBank[modeId] || 0;
+        fillEl.style.width = (bank * 10) + '%';
+        capEl.textContent = `${10 - bank} more ⭐ in ${modeMeta.shortTitle} to unlock ${nextInMode.name} (${nextInMode.tribe})!`;
         suggestWrap.innerHTML = '';
+      } else {
+        fillEl.style.width = '100%';
+        const suggested = getNextCompanionSpotlight(gameSave, gameDef, modeId);
+        if (suggested) {
+          const sugMeta = getModeMeta(gameDef, suggested.modeId);
+          capEl.textContent = `🎉 All ${gameDef.companionNounPluralLower} in ${modeMeta.title} unlocked!`;
+          suggestWrap.innerHTML = `<button type="button" id="btn-results-suggest-mode" class="suggest-mode-btn" data-action="play-suggested-mode" data-mode-id="${escapeHtml(suggested.modeId)}">${gameDef.unlockPodType === 'wand' ? '🪄' : '🥚'} Unlock ${escapeHtml(gameDef.companionNounPlural)} in ${escapeHtml(sugMeta.shortTitle)} →</button>`;
+        } else {
+          capEl.textContent = `🎉 All ${gameDef.companions.length} ${gameDef.companionNounPlural} Unlocked!`;
+          suggestWrap.innerHTML = '';
+        }
       }
     }
 
@@ -804,7 +880,7 @@ export function createArenaController({
     if (pendingUnlocks.length > 0) {
       showNextUnlockModal();
     } else {
-      if (firstTryCount === 10) launchConfetti(confettiLayerEl, 26);
+      if (firstTryCount === 10) launchConfetti(confettiLayerEl, 26, gameDef.confettiSymbols);
       SFX.roundFanfare();
       modalResultsEl.classList.remove('hidden');
     }
@@ -1226,7 +1302,14 @@ export function createArenaController({
     document.getElementById('detail-dragon-bio').textContent = c.bio;
     document.getElementById('detail-dragon-quote').textContent = `"${pick(c.quotes)}"`;
     const btn = document.getElementById('detail-select-btn');
-    btn.textContent = gameSave.activeBuddyId === c.id ? '★ Active Study Buddy' : `${gameDef.companionEmoji} Set as Study Buddy`;
+    if (gameDef.onlyCatsAsBuddy && !c.isCat) {
+      const ownerCatName = c.ownerCatName || 'Crew';
+      btn.textContent = gameSave.activeBuddyId === c.ownerCatId
+        ? `★ ${ownerCatName} Is Active Buddy`
+        : `🐱 Train with ${ownerCatName}`;
+    } else {
+      btn.textContent = gameSave.activeBuddyId === c.id ? '★ Active Study Buddy' : `${gameDef.companionEmoji} Set as Study Buddy`;
+    }
     modalDetailEl.classList.remove('hidden');
   }
 
@@ -1441,20 +1524,28 @@ export function createArenaController({
         speakText(q.prompt);
         return true;
       }
-      case 'crack-egg':
+      case 'crack-egg': {
         SFX.hatchFanfare();
-        launchConfetti(confettiLayerEl, 38);
+        const allDone = Boolean(
+          gameDef.victoryBannerText &&
+          getUnlockedCompanions(gameSave, gameDef).length >= gameDef.companions.length
+        );
+        launchConfetti(confettiLayerEl, allDone ? 65 : 38, gameDef.confettiSymbols);
         document.getElementById('unlock-egg-step')?.classList.add('hidden');
         document.getElementById('unlock-reveal-step')?.classList.remove('hidden');
         return true;
+      }
       case 'close-unlock-modal': {
         SFX.tap();
         const makeBuddy = actionEl.dataset.makeBuddy === 'true';
         const unlocked = pendingUnlocks.shift();
         if (makeBuddy && unlocked) {
-          gameSave.activeBuddyId = unlocked.id;
-          onSave();
-          onRenderHub();
+          const targetId = resolveStudyBuddyId(gameSave, gameDef, unlocked.id);
+          if (targetId) {
+            gameSave.activeBuddyId = targetId;
+            onSave();
+            onRenderHub();
+          }
         }
         modalUnlockEl.classList.add('hidden');
         if (pendingUnlocks.length > 0) {
@@ -1481,9 +1572,10 @@ export function createArenaController({
         modalDetailEl.classList.add('hidden');
         return true;
       case 'select-detail-buddy': {
-        if (detailCompanionId && gameDef.companions.some(c => c.id === detailCompanionId) && gameSave.unlockedDragons.includes(detailCompanionId)) {
+        const targetId = detailCompanionId ? resolveStudyBuddyId(gameSave, gameDef, detailCompanionId) : null;
+        if (targetId) {
           SFX.correct(false);
-          gameSave.activeBuddyId = detailCompanionId;
+          gameSave.activeBuddyId = targetId;
           onSave();
           onRenderHub();
         }

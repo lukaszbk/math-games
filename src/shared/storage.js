@@ -1,4 +1,9 @@
-import { getModeCompanions } from './progression.js';
+import {
+  getModeCompanions,
+  getStarterUnlockedIds,
+  getTrainableCompanions,
+  isSelectableBuddy
+} from './progression.js';
 
 export const FAMILY_STORAGE_KEY = 'math_arcade_save_v1';
 export const DEVICE_SETTINGS_KEY = 'math_arcade_device_v1';
@@ -39,13 +44,14 @@ export function createDefaultSprintStats(allModeIds) {
 
 export function createDefaultGameSave(gameDef) {
   const starterId = gameDef.starterId || (gameDef.companions[0] && gameDef.companions[0].id) || '';
+  const starterIds = getStarterUnlockedIds(gameDef);
   const save = {
     stars: 0,
     activeBuddyId: starterId,
     soundOn: true,
     pace: gameDef.defaultPace === 'relaxed' ? 'relaxed' : 'brisk',
     totalSolved: 0,
-    unlockedDragons: starterId ? [starterId] : [],
+    unlockedDragons: starterIds.length > 0 ? starterIds : (starterId ? [starterId] : []),
     modeBank: createDefaultModeZeroMap(gameDef.allModeIds),
     modeStarsEarned: createDefaultModeZeroMap(gameDef.allModeIds),
     modeStats: createDefaultModeStats(gameDef.allModeIds),
@@ -55,6 +61,9 @@ export function createDefaultGameSave(gameDef) {
   };
   if (gameDef.gameType === 'timed-sprint') {
     save.sprintStats = createDefaultSprintStats(gameDef.allModeIds);
+  }
+  if (gameDef.progressionType === 'sequential') {
+    save.trainingBank = 0;
   }
   return save;
 }
@@ -115,23 +124,27 @@ export function normalizeAndMigrateGameSave(parsed, gameDef) {
     : (Array.isArray(parsed.unlockedCompanions) ? parsed.unlockedCompanions : null);
 
   if (!rawUnlocked) {
-    const unlocked = starterId ? [starterId] : [];
+    const unlocked = getStarterUnlockedIds(gameDef);
     allModeIds.forEach(m => {
       const mStat = merged.modeStats[m] || { rounds: 0 };
       const est = (mStat.rounds || 0) * 4;
       merged.modeStarsEarned[m] = est;
-      const modeComps = getModeCompanions(gameDef, m);
-      const count = Math.min(modeComps.length, Math.floor(est / 10));
-      for (let i = 0; i < count; i++) {
-        if (!unlocked.includes(modeComps[i].id)) unlocked.push(modeComps[i].id);
+      if (gameDef.progressionType !== 'sequential') {
+        const modeComps = getModeCompanions(gameDef, m);
+        const count = Math.min(modeComps.length, Math.floor(est / 10));
+        for (let i = 0; i < count; i++) {
+          if (!unlocked.includes(modeComps[i].id)) unlocked.push(modeComps[i].id);
+        }
+        merged.modeBank[m] = count < modeComps.length ? (est % 10) : 0;
+      } else {
+        merged.modeBank[m] = 0;
       }
-      merged.modeBank[m] = count < modeComps.length ? (est % 10) : 0;
     });
     merged.unlockedDragons = unlocked;
     merged.v1LegacyStars = typeof parsed.stars === 'number' ? parsed.stars : 0;
   } else {
     const validIds = new Set(gameDef.companions.map(c => c.id));
-    const cleanSet = starterId ? [starterId] : [];
+    const cleanSet = getStarterUnlockedIds(gameDef);
     rawUnlocked.forEach(id => {
       if (validIds.has(id) && !cleanSet.includes(id)) cleanSet.push(id);
     });
@@ -139,20 +152,35 @@ export function normalizeAndMigrateGameSave(parsed, gameDef) {
     merged.v1LegacyStars = typeof parsed.v1LegacyStars === 'number' ? parsed.v1LegacyStars : 0;
   }
 
-  // Clamp modeBank to 0..9 and zero out completed modes
-  allModeIds.forEach(m => {
-    const lockedInMode = getModeCompanions(gameDef, m).filter(c => !merged.unlockedDragons.includes(c.id));
-    if (lockedInMode.length === 0) {
+  // Clamp banks to 0..9 and zero out completed queues
+  if (gameDef.progressionType === 'sequential') {
+    allModeIds.forEach(m => {
       merged.modeBank[m] = 0;
+    });
+    const hasLockedTrainable = getTrainableCompanions(gameDef).some(c => !merged.unlockedDragons.includes(c.id));
+    if (!hasLockedTrainable) {
+      merged.trainingBank = 0;
     } else {
-      const b = Number(merged.modeBank[m]) || 0;
-      merged.modeBank[m] = Math.max(0, Math.min(9, Math.floor(b)));
+      const b = Number(parsed.trainingBank) || 0;
+      merged.trainingBank = Math.max(0, Math.min(9, Math.floor(b)));
     }
-  });
+  } else {
+    allModeIds.forEach(m => {
+      const lockedInMode = getModeCompanions(gameDef, m).filter(c => !merged.unlockedDragons.includes(c.id));
+      if (lockedInMode.length === 0) {
+        merged.modeBank[m] = 0;
+      } else {
+        const b = Number(merged.modeBank[m]) || 0;
+        merged.modeBank[m] = Math.max(0, Math.min(9, Math.floor(b)));
+      }
+    });
+  }
 
-  if (!merged.unlockedDragons.includes(merged.activeBuddyId)) {
-    const firstUnl = gameDef.companions.find(c => merged.unlockedDragons.includes(c.id));
-    merged.activeBuddyId = firstUnl ? firstUnl.id : starterId;
+  const activeComp = gameDef.companions.find(c => c.id === merged.activeBuddyId);
+  if (!isSelectableBuddy(merged, gameDef, activeComp)) {
+    const firstValid = gameDef.companions.find(c => isSelectableBuddy(merged, gameDef, c))
+      || gameDef.companions.find(c => merged.unlockedDragons.includes(c.id));
+    merged.activeBuddyId = firstValid ? firstValid.id : starterId;
   }
 
   return merged;

@@ -107,3 +107,19 @@
   --jade-100: #FCE7F3;
   --jade-50: #FDF2F8;
 }
+
+/* Moonlit Sea-Teal & Starlight Pearl Theme (Meow Training) */
+[data-theme="wand"] {
+  --bg-parchment: #F3FAFB;
+  --bg-parchment-deep: #E2F2F5;
+  --bg-card: #FFFFFF;
+  --bg-subtle: #EAF6F8;
+  --border-warm: #BFE0E6;
+  --border-strong: #8CC4CF;
+
+  --jade-700: #0E6478;
+  --jade-600: #137D94;
+  --jade-500: #1996B0;
+  --jade-100: #D7F3F7;
+  --jade-50: #EDFAFC;
+}
