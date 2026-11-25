@@ -18,6 +18,8 @@ import {
   getCompanionFactions,
   getModeCompanions,
   getModeMeta,
+  getNextSequentialPrize,
+  getStarterUnlockedIds,
   getUnlockedCompanions,
   isCompanionUnlocked,
   syncModeBanksAndBuddyAfterAdminEdit
@@ -284,6 +286,12 @@ export function createParentsController({
         compCell = x.meta.id === grandModeId
           ? `👑 Grand Prize (${prizeUnlocked ? 'Awakened ✓' : `${best5m}/${grandGoal}`})`
           : '🎯 Speed Training';
+      } else if (gameDef.progressionType === 'sequential') {
+        bestCell = `Best: ${rounds > 0 ? `${st.bestFirstTry}/10` : '—'}`;
+        const nextSeq = getNextSequentialPrize(gameSave, gameDef);
+        compCell = nextSeq
+          ? `🪄 Wand Bank (${gameSave.trainingBank || 0}/10 ⭐)`
+          : `👑 ${escapeHtml(gameDef.victoryBannerText || 'All Unlocked ✓')}`;
       } else {
         bestCell = `Best: ${rounds > 0 ? `${st.bestFirstTry}/10` : '—'}`;
         const mComps = getModeCompanions(gameDef, x.meta.id);
@@ -338,8 +346,9 @@ export function createParentsController({
       ? Math.min(25, Math.floor(gameSave.v1LegacyStars / 10) + 1)
       : 0;
 
+    const starterIds = getStarterUnlockedIds(gameDef);
     const renderCompanionTile = (c) => {
-      const isStarter = c.id === gameDef.starterId;
+      const isStarter = starterIds.includes(c.id);
       const isUnl = isStarter || isCompanionUnlocked(gameSave, c.id);
       const mMeta = getModeMeta(gameDef, c.modeId);
       const btnHTML = isStarter
@@ -370,7 +379,7 @@ export function createParentsController({
       adminGridHTML = groups.map(g => {
         const list = filterCompanionsByFaction(getModeCompanions(gameDef, g.id), parentFactionFilter);
         if (list.length === 0) return '';
-        const unlockedInGroup = list.filter(c => c.id === gameDef.starterId || isCompanionUnlocked(gameSave, c.id)).length;
+        const unlockedInGroup = list.filter(c => starterIds.includes(c.id) || isCompanionUnlocked(gameSave, c.id)).length;
         return `
           <div style="margin-bottom:14px;">
             <h4 style="margin:0 0 8px; font-size:0.92rem; color:var(--jade-700);">${g.icon} ${escapeHtml(g.title)} (${unlockedInGroup}/${list.length})</h4>
@@ -830,14 +839,17 @@ export function createParentsController({
       case 'parent-toggle-companion': {
         if (!parentUnlocked) return true;
         const id = actionEl.dataset.companionId;
-        if (id === gameDef.starterId) return true;
+        const starterIds = getStarterUnlockedIds(gameDef);
+        if (starterIds.includes(id)) return true;
         SFX.tap();
         const idx = gameSave.unlockedDragons.indexOf(id);
         if (idx >= 0) {
           gameSave.unlockedDragons.splice(idx, 1);
-          if (!gameSave.unlockedDragons.includes(gameDef.starterId)) {
-            gameSave.unlockedDragons.unshift(gameDef.starterId);
-          }
+          starterIds.forEach(sid => {
+            if (!gameSave.unlockedDragons.includes(sid)) {
+              gameSave.unlockedDragons.unshift(sid);
+            }
+          });
         } else {
           gameSave.unlockedDragons.push(id);
         }
@@ -857,7 +869,7 @@ export function createParentsController({
       case 'parent-lock-all':
         if (!parentUnlocked) return true;
         SFX.tap();
-        gameSave.unlockedDragons = [gameDef.starterId];
+        gameSave.unlockedDragons = getStarterUnlockedIds(gameDef);
         syncModeBanksAndBuddyAfterAdminEdit(gameSave, gameDef);
         onSave();
         rerenderFn();

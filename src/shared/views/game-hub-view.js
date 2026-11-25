@@ -5,14 +5,19 @@ import {
   getModeCompanions,
   getModeMeta,
   getNextCompanionSpotlight,
+  getNextSequentialPrize,
+  getTrainableCompanions,
   getUnlockedCompanions,
-  isCompanionUnlocked
+  isCompanionUnlocked,
+  isSelectableBuddy
 } from '../progression.js';
 
 export function renderGameHubShell({ container, gameDef, gameSave, profile, soundOn, currentTab, activeFilter }) {
   if (!container) return;
 
   const isTimedSprint = gameDef.gameType === 'timed-sprint';
+  const isSequential = gameDef.progressionType === 'sequential';
+  const isWand = gameDef.unlockPodType === 'wand';
   const buddy = getActiveBuddy(gameSave, gameDef);
   const unlocked = getUnlockedCompanions(gameSave, gameDef);
   const sprintStats = gameSave.sprintStats || {};
@@ -26,11 +31,15 @@ export function renderGameHubShell({ container, gameDef, gameSave, profile, soun
   const prizeUnlocked = gameDef.grandPrizeId ? isCompanionUnlocked(gameSave, gameDef.grandPrizeId) : false;
   const prizeComp = gameDef.companions.find(c => c.id === gameDef.grandPrizeId) || gameDef.companions[gameDef.companions.length - 1];
 
-  const spotlight = isTimedSprint ? null : getNextCompanionSpotlight(gameSave, gameDef, null);
+  const nextSequential = isSequential ? getNextSequentialPrize(gameSave, gameDef) : null;
+  const seqBank = isSequential ? (gameSave.trainingBank || 0) : 0;
+  const seqAllUnlocked = isSequential && !nextSequential && unlocked.length >= gameDef.companions.length;
+  const spotlight = (isTimedSprint || isSequential) ? null : getNextCompanionSpotlight(gameSave, gameDef, null);
 
   let progressPct;
   let nextCaption;
   let peekImg;
+  let peekVisualHTML = '';
   let peekAllUnlocked;
   let rightStatHTML;
 
@@ -42,6 +51,19 @@ export function renderGameHubShell({ container, gameDef, gameSave, profile, soun
     peekImg = prizeComp.image;
     peekAllUnlocked = prizeUnlocked;
     rightStatHTML = `<span class="unlock-count-label">🏆 Best 5m: ${best5m}/${grandGoal} • ⚡ ${best5mPace.toFixed(1)}/min</span>`;
+  } else if (isSequential) {
+    progressPct = nextSequential ? (seqBank * 10) : 100;
+    nextCaption = nextSequential
+      ? `${10 - seqBank} more ⭐ with the Magic Wand to unlock ${nextSequential.name}!`
+      : `👑 ${gameDef.victoryBannerText || `Every single ${gameDef.companionNoun.toLowerCase()} is unlocked!`}`;
+    peekAllUnlocked = !nextSequential;
+    if (nextSequential && typeof gameDef.renderLockedPeekHTML === 'function') {
+      peekVisualHTML = gameDef.renderLockedPeekHTML(nextSequential);
+    } else {
+      const finalHero = gameDef.companions.find(c => c.isCat && c.id === '14_aria') || gameDef.companions[gameDef.companions.length - 1];
+      peekImg = nextSequential ? nextSequential.image : finalHero.image;
+    }
+    rightStatHTML = `<span class="unlock-count-label">${gameDef.companionEmoji} <span id="stat-unlocked-count">${unlocked.length}</span> / <span id="stat-total-dragons">${gameDef.companions.length}</span> ${escapeHtml(gameDef.companionNounPlural)}</span>`;
   } else {
     progressPct = spotlight ? (spotlight.bank * 10) : 100;
     nextCaption = spotlight
@@ -70,6 +92,20 @@ export function renderGameHubShell({ container, gameDef, gameSave, profile, soun
         <span style="font-size:0.82rem; font-weight:800;">👑 Grand Prize: ${escapeHtml(prizeComp.name)}</span>
         <div class="mini-track"><div class="mini-fill" style="width:${Math.min(100, (best5m / grandGoal) * 100).toFixed(1)}%"></div></div>
         <span style="font-size:0.8rem; font-weight:700; color:rgba(255,255,255,0.92);">${best5m}/${grandGoal} facts in ${grandDurLabel}</span>
+      `;
+  } else if (isSequential) {
+    mixMastered = mixStat.rounds > 0 && mixStat.bestFirstTry >= 9;
+    mixRecordText = mixStat.rounds === 0
+      ? 'New Quest!'
+      : `🏅 Best: ${mixStat.bestFirstTry}/10 • ${mixStat.rounds} ${mixStat.rounds === 1 ? 'round' : 'rounds'}`;
+    mixProgHTML = nextSequential
+      ? `
+        <span style="font-size:0.82rem; font-weight:800;">🪄 ${unlocked.length}/${gameDef.companions.length} Unlocked</span>
+        <div class="mini-track"><div class="mini-fill" style="width:${seqBank * 10}%"></div></div>
+        <span style="font-size:0.8rem; font-weight:700; color:rgba(255,255,255,0.92);">${seqBank}/10 ⭐ → ${escapeHtml(nextSequential.name)}</span>
+      `
+      : `
+        <span style="font-size:0.86rem; font-weight:800; color:#FDE68A;">👑 ${escapeHtml(gameDef.victoryBannerText || 'All prizes unlocked!')} ✨</span>
       `;
   } else {
     mixMastered = mixStat.rounds > 0 && mixStat.bestFirstTry >= 9;
@@ -148,27 +184,48 @@ export function renderGameHubShell({ container, gameDef, gameSave, profile, soun
       ? 'New Quest!'
       : `🏅 Best: ${st.bestFirstTry}/10 • ${st.rounds} ${st.rounds === 1 ? 'round' : 'rounds'}`;
 
-    const modeComps = getModeCompanions(gameDef, m.id);
-    const unlCount = modeComps.filter(c => isCompanionUnlocked(gameSave, c.id)).length;
-    const nextComp = modeComps.find(c => !isCompanionUnlocked(gameSave, c.id));
-    const bank = gameSave.modeBank[m.id] || 0;
-    const compProgressHTML = nextComp
-      ? `
-        <div class="mode-dragon-box">
-          <div class="mode-dragon-row">
-            <span>${gameDef.companionEmoji} ${unlCount}/${modeComps.length} ${escapeHtml(gameDef.companionNounPlural)}</span>
-            <span>${bank}/10 ⭐ → ${escapeHtml(nextComp.name)}</span>
+    let compProgressHTML;
+    if (isSequential) {
+      compProgressHTML = nextSequential
+        ? `
+          <div class="mode-dragon-box">
+            <div class="mode-dragon-row">
+              <span>🪄 Wand: ${unlocked.length}/${gameDef.companions.length}</span>
+              <span>${seqBank}/10 ⭐ → ${escapeHtml(nextSequential.name)}</span>
+            </div>
+            <div class="mini-track"><div class="mini-fill" style="width:${seqBank * 10}%"></div></div>
           </div>
-          <div class="mini-track"><div class="mini-fill" style="width:${bank * 10}%"></div></div>
-        </div>
-      `
-      : `
-        <div class="mode-dragon-box complete">
-          <div class="mode-dragon-row">
-            <span>${gameDef.companionEmoji} ${modeComps.length}/${modeComps.length} ${escapeHtml(gameDef.companionNounPlural)} Hatched! ✨</span>
+        `
+        : `
+          <div class="mode-dragon-box complete">
+            <div class="mode-dragon-row">
+              <span>👑 ${escapeHtml(gameDef.victoryBannerText || 'All prizes unlocked!')} ✨</span>
+            </div>
           </div>
-        </div>
-      `;
+        `;
+    } else {
+      const modeComps = getModeCompanions(gameDef, m.id);
+      const unlCount = modeComps.filter(c => isCompanionUnlocked(gameSave, c.id)).length;
+      const nextComp = modeComps.find(c => !isCompanionUnlocked(gameSave, c.id));
+      const bank = gameSave.modeBank[m.id] || 0;
+      compProgressHTML = nextComp
+        ? `
+          <div class="mode-dragon-box">
+            <div class="mode-dragon-row">
+              <span>${gameDef.companionEmoji} ${unlCount}/${modeComps.length} ${escapeHtml(gameDef.companionNounPlural)}</span>
+              <span>${bank}/10 ⭐ → ${escapeHtml(nextComp.name)}</span>
+            </div>
+            <div class="mini-track"><div class="mini-fill" style="width:${bank * 10}%"></div></div>
+          </div>
+        `
+        : `
+          <div class="mode-dragon-box complete">
+            <div class="mode-dragon-row">
+              <span>${gameDef.companionEmoji} ${modeComps.length}/${modeComps.length} ${escapeHtml(gameDef.companionNounPlural)} Hatched! ✨</span>
+            </div>
+          </div>
+        `;
+    }
 
     return `
       <button type="button" id="card-mode-${escapeHtml(m.id)}" class="mode-card" data-action="start-round" data-mode-id="${escapeHtml(m.id)}">
@@ -276,23 +333,49 @@ export function renderGameHubShell({ container, gameDef, gameSave, profile, soun
     `;
   }).join('');
 
+  const trainableLocked = isSequential
+    ? getTrainableCompanions(gameDef).filter(x => !isCompanionUnlocked(gameSave, x.id))
+    : [];
+
   const companionsGridHTML = regularCompanions.map(c => {
     const isUnl = isCompanionUnlocked(gameSave, c.id);
     const isBuddy = gameSave.activeBuddyId === c.id && isUnl;
     const modeMeta = getModeMeta(gameDef, c.modeId);
+    const kindEmoji = c.kind === 'Cat' ? '🐱' : (c.kind === 'Power' ? '⚡' : (c.kind === 'Skill' ? '🥋' : (c.kind === 'Object / Person' ? '🤡' : '💎')));
 
     if (isUnl) {
-      return `
-        <div class="dragon-card unlocked ${isBuddy ? 'active-buddy' : ''}" data-action="open-companion-detail" data-companion-id="${escapeHtml(c.id)}">
-          <div class="dragon-portrait-box">
-            <img src="${escapeHtml(c.image)}" alt="${escapeHtml(c.name)}" loading="lazy" />
-          </div>
-          <div class="dragon-badges-row">
-            <span class="tribe-pill">${escapeHtml(c.tribe)}</span>
-            <span class="quest-pill">${modeMeta.icon} ${escapeHtml(modeMeta.shortTitle)}</span>
-          </div>
-          <h3 class="dragon-name">${escapeHtml(c.name)}</h3>
-          <p class="dragon-bio">${escapeHtml(c.bio)}</p>
+      let actionBtnHTML;
+      if (gameDef.onlyCatsAsBuddy) {
+        if (isSelectableBuddy(gameSave, gameDef, c)) {
+          actionBtnHTML = `
+            <button
+              type="button"
+              class="buddy-select-btn ${isBuddy ? 'selected' : ''}"
+              data-action="choose-study-buddy"
+              data-companion-id="${escapeHtml(c.id)}"
+            >
+              ${isBuddy ? '★ Active Study Buddy' : 'Choose as Buddy'}
+            </button>
+          `;
+        } else {
+          const ownerCat = gameDef.companions.find(x => x.id === c.ownerCatId);
+          const ownerUnlocked = ownerCat && isCompanionUnlocked(gameSave, ownerCat.id);
+          const ownerIsBuddy = ownerUnlocked && gameSave.activeBuddyId === ownerCat.id;
+          actionBtnHTML = ownerUnlocked
+            ? `
+              <button
+                type="button"
+                class="buddy-select-btn ${ownerIsBuddy ? 'selected' : ''}"
+                data-action="choose-study-buddy"
+                data-companion-id="${escapeHtml(ownerCat.id)}"
+              >
+                ${ownerIsBuddy ? `★ With ${escapeHtml(ownerCat.name)} (Active)` : `🐱 Train with ${escapeHtml(ownerCat.name)}`}
+              </button>
+            `
+            : `<span class="quest-pill">For ${escapeHtml(c.ownerCatName || 'Crew')}</span>`;
+        }
+      } else {
+        actionBtnHTML = `
           <button
             type="button"
             class="buddy-select-btn ${isBuddy ? 'selected' : ''}"
@@ -301,6 +384,66 @@ export function renderGameHubShell({ container, gameDef, gameSave, profile, soun
           >
             ${isBuddy ? '★ Active Study Buddy' : 'Choose as Buddy'}
           </button>
+        `;
+      }
+
+      return `
+        <div class="dragon-card unlocked ${isBuddy ? 'active-buddy' : ''}" data-action="open-companion-detail" data-companion-id="${escapeHtml(c.id)}">
+          <div class="dragon-portrait-box">
+            <img src="${escapeHtml(c.image)}" alt="${escapeHtml(c.name)}" loading="lazy" />
+          </div>
+          <div class="dragon-badges-row">
+            <span class="tribe-pill">${escapeHtml(c.tribe)}</span>
+            ${c.kind ? `<span class="prize-kind-pill">${kindEmoji} ${escapeHtml(c.kind)}</span>` : `<span class="quest-pill">${modeMeta.icon} ${escapeHtml(modeMeta.shortTitle)}</span>`}
+          </div>
+          <h3 class="dragon-name">${escapeHtml(c.name)}</h3>
+          <p class="dragon-bio">${escapeHtml(c.bio)}</p>
+          ${actionBtnHTML}
+        </div>
+      `;
+    }
+
+    const portraitVisualHTML = typeof gameDef.renderLockedCardVisualHTML === 'function'
+      ? `
+        <div class="dragon-portrait-box has-shadow-svg">
+          ${gameDef.renderLockedCardVisualHTML(c)}
+          <div class="lock-overlay shadow-overlay">
+            <span class="lock-star-pill">${c.isCat ? '🐱 Cat Shadow' : (isWand ? `🪄 ${escapeHtml(c.kind || 'Prize')}` : `${modeMeta.icon} ${escapeHtml(modeMeta.shortTitle)}`)}</span>
+          </div>
+        </div>
+      `
+      : `
+        <div class="dragon-portrait-box">
+          <img src="${escapeHtml(c.image)}" alt="Locked Mystery ${escapeHtml(gameDef.companionNoun)}" loading="lazy" />
+          <div class="lock-overlay">
+            <span style="font-size:1.5rem;">🔒</span>
+            <span class="lock-star-pill">${modeMeta.icon} ${escapeHtml(modeMeta.shortTitle)}</span>
+          </div>
+        </div>
+      `;
+
+    if (isSequential) {
+      let lockedBioHTML;
+      let targetModeId = c.modeId && c.modeId !== 'starter' ? c.modeId : 'mix';
+      if (c.isAutoMilestone) {
+        const prevName = c.id === '07_fang' ? 'Misty’s Crew' : 'Fang’s Pack';
+        lockedBioHTML = `Unlock all of <strong>${prevName}</strong>’s training prizes to reveal this ${escapeHtml(c.kind || 'Cat')} shadow with the Magic Wand!`;
+        targetModeId = 'mix';
+      } else {
+        const queueIndex = Math.max(0, trainableLocked.findIndex(x => x.id === c.id));
+        const needed = queueIndex * 10 + (10 - seqBank);
+        lockedBioHTML = `Earn <strong>${needed} more ⭐</strong> in any quest to wave the Magic Wand and unlock this ${escapeHtml(c.kind || 'prize')}${c.ownerCatName ? ` for ${escapeHtml(c.ownerCatName)}` : ''}!`;
+      }
+      return `
+        <div class="dragon-card locked">
+          ${portraitVisualHTML}
+          <div class="dragon-badges-row">
+            <span class="tribe-pill">${escapeHtml(c.tribe)}</span>
+            ${c.kind ? `<span class="prize-kind-pill">${kindEmoji} ${escapeHtml(c.kind)}</span>` : ''}
+          </div>
+          <h3 class="dragon-name">${c.isCat ? '??? (Cat Shadow)' : '???'}</h3>
+          <p class="dragon-bio">${lockedBioHTML}</p>
+          <button type="button" class="locked-quest-btn" data-action="start-round" data-mode-id="${escapeHtml(targetModeId)}">Train Quest →</button>
         </div>
       `;
     }
@@ -310,13 +453,7 @@ export function renderGameHubShell({ container, gameDef, gameSave, profile, soun
     const needed = queueIndex * 10 + (10 - (gameSave.modeBank[c.modeId] || 0));
     return `
       <div class="dragon-card locked">
-        <div class="dragon-portrait-box">
-          <img src="${escapeHtml(c.image)}" alt="Locked Mystery ${escapeHtml(gameDef.companionNoun)}" loading="lazy" />
-          <div class="lock-overlay">
-            <span style="font-size:1.5rem;">🔒</span>
-            <span class="lock-star-pill">${modeMeta.icon} ${escapeHtml(modeMeta.shortTitle)}</span>
-          </div>
-        </div>
+        ${portraitVisualHTML}
         <div class="dragon-badges-row">
           <span class="tribe-pill">${escapeHtml(c.tribe)}</span>
           <span class="quest-pill">${modeMeta.icon} ${escapeHtml(modeMeta.shortTitle)}</span>
@@ -357,8 +494,8 @@ export function renderGameHubShell({ container, gameDef, gameSave, profile, soun
           </div>
           <div id="stat-next-caption" class="next-unlock-caption">${escapeHtml(nextCaption)}</div>
         </div>
-        <div id="next-dragon-peek" class="next-dragon-peek ${peekAllUnlocked ? 'all-unlocked' : ''}" data-action="switch-tab" data-tab="sanctuary" title="Next ${escapeHtml(gameDef.companionNoun)} to Unlock">
-          <img id="next-dragon-img" src="${escapeHtml(peekImg)}" alt="Next mystery companion" />
+        <div id="next-dragon-peek" class="next-dragon-peek ${peekAllUnlocked ? 'all-unlocked' : ''} ${peekVisualHTML ? 'has-shadow-svg' : ''}" data-action="switch-tab" data-tab="sanctuary" title="Next ${escapeHtml(gameDef.companionNoun)} to Unlock">
+          ${peekVisualHTML || `<img id="next-dragon-img" src="${escapeHtml(peekImg)}" alt="Next mystery companion" />`}
           <span id="next-dragon-q" class="peek-q ${peekAllUnlocked ? 'hidden' : ''}">?</span>
         </div>
       </div>
@@ -416,6 +553,7 @@ export function renderGameHubShell({ container, gameDef, gameSave, profile, soun
           </div>
         ` : ''}
       </div>
+      ${typeof gameDef.renderSanctuaryOverviewHTML === 'function' ? gameDef.renderSanctuaryOverviewHTML(gameSave, gameDef) : ''}
       ${colossalSectionHTML}
       ${colossalCompanions.length > 0 && regularCompanions.length > 0 ? '<h3 class="sanctuary-subhead">🌟 Your Study Coach</h3>' : ''}
       <div id="dragons-grid" class="dragons-grid">

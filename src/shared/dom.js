@@ -11,13 +11,13 @@ export function escapeHtml(str) {
     .replace(/'/g, '&#39;');
 }
 
-export function launchConfetti(layerEl, count = 26) {
+export function launchConfetti(layerEl, count = 26, symbols = ['⭐', '✨', '🌟', '🐉', '💎', '🎉']) {
   if (!layerEl || typeof document === 'undefined') return;
-  const symbols = ['⭐', '✨', '🌟', '🐉', '💎', '🎉'];
+  const palette = Array.isArray(symbols) && symbols.length > 0 ? symbols : ['⭐', '✨', '🌟', '🐉', '💎', '🎉'];
   for (let i = 0; i < count; i++) {
     const el = document.createElement('span');
     el.className = 'confetti-piece';
-    el.textContent = symbols[i % symbols.length];
+    el.textContent = palette[i % palette.length];
     el.style.left = (Math.random() * 96 + 2).toFixed(1) + '%';
     el.style.animationDuration = (1.6 + Math.random() * 1.4).toFixed(2) + 's';
     el.style.animationDelay = (Math.random() * 0.35).toFixed(2) + 's';

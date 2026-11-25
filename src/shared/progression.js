@@ -2,6 +2,48 @@ export function getModeCompanions(gameDef, modeId) {
   return (gameDef.companions || []).filter(c => c.modeId === modeId);
 }
 
+export function getStarterUnlockedIds(gameDef) {
+  if (!gameDef) return [];
+  const validIds = new Set((gameDef.companions || []).map(c => c.id));
+  if (Array.isArray(gameDef.starterUnlockedIds) && gameDef.starterUnlockedIds.length > 0) {
+    const out = [];
+    gameDef.starterUnlockedIds.forEach(id => {
+      if (validIds.has(id) && !out.includes(id)) out.push(id);
+    });
+    if (out.length > 0) return out;
+  }
+  return gameDef.starterId && validIds.has(gameDef.starterId) ? [gameDef.starterId] : [];
+}
+
+export function getTrainableCompanions(gameDef) {
+  return (gameDef && Array.isArray(gameDef.companions) ? gameDef.companions : [])
+    .slice()
+    .sort((a, b) => (a.orderNum || 0) - (b.orderNum || 0))
+    .filter(c => !c.isStarter && !c.isAutoMilestone);
+}
+
+export function getNextSequentialPrize(gameSave, gameDef) {
+  return getTrainableCompanions(gameDef).find(c => !isCompanionUnlocked(gameSave, c.id)) || null;
+}
+
+export function isSelectableBuddy(gameSave, gameDef, comp) {
+  if (!comp || !isCompanionUnlocked(gameSave, comp.id)) return false;
+  if (gameDef && gameDef.onlyCatsAsBuddy) return Boolean(comp.isCat);
+  return true;
+}
+
+export function resolveStudyBuddyId(gameSave, gameDef, companionId) {
+  if (!gameDef || !companionId) return null;
+  const list = gameDef.companions || [];
+  const comp = list.find(c => c.id === companionId);
+  if (!comp || !isCompanionUnlocked(gameSave, comp.id)) return null;
+  if (gameDef.onlyCatsAsBuddy && !comp.isCat) {
+    const owner = list.find(c => c.id === comp.ownerCatId);
+    return isSelectableBuddy(gameSave, gameDef, owner) ? owner.id : null;
+  }
+  return isSelectableBuddy(gameSave, gameDef, comp) ? comp.id : null;
+}
+
 export function parseCompanionFactions(tribeStr) {
   return String(tribeStr || '')
     .split('•')
@@ -50,11 +92,13 @@ export function getUnlockedCompanions(gameSave, gameDef) {
 
 export function getActiveBuddy(gameSave, gameDef) {
   const list = gameDef.companions || [];
-  if (isCompanionUnlocked(gameSave, gameSave.activeBuddyId)) {
-    const found = list.find(c => c.id === gameSave.activeBuddyId);
-    if (found) return found;
+  const active = list.find(c => c.id === gameSave.activeBuddyId);
+  if (isSelectableBuddy(gameSave, gameDef, active)) {
+    return active;
   }
-  return list.find(c => isCompanionUnlocked(gameSave, c.id)) || list[0];
+  return list.find(c => isSelectableBuddy(gameSave, gameDef, c))
+    || list.find(c => isCompanionUnlocked(gameSave, c.id))
+    || list[0];
 }
 
 export function getModeMeta(gameDef, modeId) {
@@ -71,6 +115,19 @@ export function getModeMeta(gameDef, modeId) {
 }
 
 export function getNextCompanionSpotlight(gameSave, gameDef, preferredExcludeMode) {
+  if (gameDef && gameDef.progressionType === 'sequential') {
+    const nextPrize = getNextSequentialPrize(gameSave, gameDef);
+    if (!nextPrize) return null;
+    const fallbackMode = (gameDef.modes && gameDef.modes[0] && gameDef.modes[0].id) || 'mix';
+    const targetMode = preferredExcludeMode === 'mix' ? fallbackMode : 'mix';
+    return {
+      modeId: targetMode,
+      companion: nextPrize,
+      bank: gameSave.trainingBank || 0,
+      rounds: (gameSave.modeStats && gameSave.modeStats[targetMode] && gameSave.modeStats[targetMode].rounds) || 0
+    };
+  }
+
   const allModeIds = gameDef.allModeIds;
   const candidates = allModeIds
     .filter(m => !preferredExcludeMode || m !== preferredExcludeMode)
@@ -143,35 +200,86 @@ export function applyRoundCompletion({ gameSave, gameDef, modeId, firstTryCount,
   prev.lastPlayedAt = now;
   gameSave.modeStats[modeId] = prev;
 
-  const lockedInMode = getModeCompanions(gameDef, modeId).filter(c => !isCompanionUnlocked(gameSave, c.id));
   const pendingUnlocks = [];
-  if (lockedInMode.length > 0) {
-    let bank = (gameSave.modeBank[modeId] || 0) + starsEarned;
-    while (bank >= 10 && lockedInMode.length > 0) {
-      bank -= 10;
-      const hatched = lockedInMode.shift();
-      if (!isCompanionUnlocked(gameSave, hatched.id)) {
-        gameSave.unlockedDragons.push(hatched.id);
+  if (gameDef.progressionType === 'sequential') {
+    const lockedTrainable = getTrainableCompanions(gameDef).filter(c => !isCompanionUnlocked(gameSave, c.id));
+    const autoMilestones = (gameDef.companions || [])
+      .slice()
+      .sort((a, b) => (a.orderNum || 0) - (b.orderNum || 0))
+      .filter(c => c.isAutoMilestone && Array.isArray(c.prerequisiteIds) && c.prerequisiteIds.length > 0);
+
+    if (lockedTrainable.length > 0) {
+      let bank = (gameSave.trainingBank || 0) + starsEarned;
+      while (bank >= 10 && lockedTrainable.length > 0) {
+        bank -= 10;
+        const unlockedPrize = lockedTrainable.shift();
+        if (!isCompanionUnlocked(gameSave, unlockedPrize.id)) {
+          gameSave.unlockedDragons.push(unlockedPrize.id);
+        }
+        pendingUnlocks.push(unlockedPrize);
+
+        autoMilestones.forEach(cat => {
+          if (
+            !isCompanionUnlocked(gameSave, cat.id) &&
+            cat.prerequisiteIds.every(pid => isCompanionUnlocked(gameSave, pid))
+          ) {
+            gameSave.unlockedDragons.push(cat.id);
+            if (cat.starterGiftId && !isCompanionUnlocked(gameSave, cat.starterGiftId)) {
+              gameSave.unlockedDragons.push(cat.starterGiftId);
+            }
+            pendingUnlocks.push(cat);
+          }
+        });
       }
-      pendingUnlocks.push(hatched);
+      gameSave.trainingBank = lockedTrainable.length > 0 ? bank : 0;
+    } else {
+      gameSave.trainingBank = 0;
     }
-    gameSave.modeBank[modeId] = lockedInMode.length > 0 ? bank : 0;
   } else {
-    gameSave.modeBank[modeId] = 0;
+    const lockedInMode = getModeCompanions(gameDef, modeId).filter(c => !isCompanionUnlocked(gameSave, c.id));
+    if (lockedInMode.length > 0) {
+      let bank = (gameSave.modeBank[modeId] || 0) + starsEarned;
+      while (bank >= 10 && lockedInMode.length > 0) {
+        bank -= 10;
+        const hatched = lockedInMode.shift();
+        if (!isCompanionUnlocked(gameSave, hatched.id)) {
+          gameSave.unlockedDragons.push(hatched.id);
+        }
+        pendingUnlocks.push(hatched);
+      }
+      gameSave.modeBank[modeId] = lockedInMode.length > 0 ? bank : 0;
+    } else {
+      gameSave.modeBank[modeId] = 0;
+    }
   }
 
   return { starsEarned, breakdown, pendingUnlocks };
 }
 
 export function syncModeBanksAndBuddyAfterAdminEdit(gameSave, gameDef) {
-  gameDef.allModeIds.forEach(m => {
-    const hasLocked = getModeCompanions(gameDef, m).some(c => !isCompanionUnlocked(gameSave, c.id));
-    if (!hasLocked) gameSave.modeBank[m] = 0;
-  });
-  const hasValidBuddy = (gameDef.companions || []).some(c => c.id === gameSave.activeBuddyId)
-    && isCompanionUnlocked(gameSave, gameSave.activeBuddyId);
-  if (!hasValidBuddy) {
-    const fallback = gameDef.companions.find(c => isCompanionUnlocked(gameSave, c.id)) || gameDef.companions[0];
+  if (gameDef.progressionType === 'sequential') {
+    gameDef.allModeIds.forEach(m => {
+      gameSave.modeBank[m] = 0;
+    });
+    const hasLockedTrainable = getTrainableCompanions(gameDef).some(c => !isCompanionUnlocked(gameSave, c.id));
+    if (!hasLockedTrainable) {
+      gameSave.trainingBank = 0;
+    } else {
+      const b = Number(gameSave.trainingBank) || 0;
+      gameSave.trainingBank = Math.max(0, Math.min(9, Math.floor(b)));
+    }
+  } else {
+    gameDef.allModeIds.forEach(m => {
+      const hasLocked = getModeCompanions(gameDef, m).some(c => !isCompanionUnlocked(gameSave, c.id));
+      if (!hasLocked) gameSave.modeBank[m] = 0;
+    });
+  }
+
+  const active = (gameDef.companions || []).find(c => c.id === gameSave.activeBuddyId);
+  if (!isSelectableBuddy(gameSave, gameDef, active)) {
+    const fallback = (gameDef.companions || []).find(c => isSelectableBuddy(gameSave, gameDef, c))
+      || (gameDef.companions || []).find(c => isCompanionUnlocked(gameSave, c.id))
+      || gameDef.companions[0];
     gameSave.activeBuddyId = fallback.id;
   }
 }

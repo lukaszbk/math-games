@@ -1,6 +1,6 @@
 # Family Math Arcade
 
-A zero-build, static HTML/CSS/ES-module math arcade for elementary learners, featuring independent kid profiles, strict per-profile game assignment, six full games built on a shared XtraMath-style practice engine, synthesized Web Audio feedback, and a PIN-protected Parent Dashboard.
+A zero-build, static HTML/CSS/ES-module math arcade for elementary learners, featuring independent kid profiles, strict per-profile game assignment, seven full games built on a shared XtraMath-style practice engine, synthesized Web Audio feedback, and a PIN-protected Parent Dashboard.
 
 ## Games Included
 
@@ -21,10 +21,14 @@ A zero-build, static HTML/CSS/ES-module math arcade for elementary learners, fea
    - **Visual blueprints & dual locks:** every puzzle includes a custom crisp inline SVG diagram — paw-tile grid rooms & courtyard fountain cutouts, glowing laser-fence perimeter polygons, 4-orientation L-shape castles with dotted rectangle splits and missing step walls, missing-side & dual Area+Perimeter vault locks (`multi_slot`), tappable side-by-side Hernado Watch blueprint comparisons (same Area/different Perimeter and vice versa), and quadrilateral/polygon shields marked with parallel chevrons, equal ticks, and `90°` corner boxes.
    - **The Kitty Friend rule:** awards **1 ⭐ per first-try solve** (plus `+1 ⭐` Daily Patrol bonus for 8+ first-try solves), so **10 first-try solves unlocks a new Kitty friend** (`10/10 ⭐`). Features the cosmic berry-rose `kitty` theme (`css/tokens.css`, `css/shapes.css`), `relaxed` untimed default pace, and prompt read-aloud (`🔊 Read`).
    - Modes: **SuperKitties Daily Patrol**, **Paw-Tile Rooms & Gardens**, **Laser-Fence Perimeter**, **L-Shape Hero Castles**, **Mystery Side Vaults**, **Hernado Watch**, and **Shape & Shield Academy**.
-5. **Addition & Subtraction** (1st Grade — `#/game/addition-subtraction`, assigned to `grade1`)
+5. **Meow Training** (3rd Grade — `#/game/meow-training`, assigned to `grade3`, *By Hanna BK*)
+   - 3rd-grade 3D Volume & Liquid Capacity adventure featuring 3 hero cats (**Misty**, **Fang**, and **Aria**) and 16 collectible Powers, Objects, and Skills (19 prizes total). Starts with **Misty** and **Transforming** unlocked; every **10 ⭐** waves the glowing **Magic Wand** (with **Cat Shadow** silhouettes on locked cats!) to unlock the next prize sequentially, automatically awakening Fang + Making Things Float with Her Mind and Aria + Leader of the Sea Force until all 19 prizes proclaim **`queen monster defeated!!!`**.
+   - **3D isometric vector art & wand theme:** Moonlit Sea-Teal & Starlight Pearl `wand` theme (`css/tokens.css`, `css/volume.css`), `relaxed` untimed default pace, prompt read-aloud (`🔊 Read`), and inline 3D isometric SVGs (`src/games/meow-training/svg-volume.js`).
+   - Modes: **Daily Meow Training Mix**, **Unit Cube Stacks**, **Layer Cake Prisms**, **Magic Crate Volume**, **Twin Cat Towers**, **Sea Force Tank Duel**, and **Wand Potions & Mystery Height**.
+6. **Addition & Subtraction** (1st Grade — `#/game/addition-subtraction`, assigned to `grade1`)
    - Built around i-Ready Grade 1 mental-math strategies (*Teen Numbers as 10 and Some More*, *Make a Ten to Add*, *Use a Ten to Subtract*) with a warm storybook Meadow theme, `relaxed` untimed default pace, optional `🔊 Read` prompt speech synthesis, visual number-path jump arcs, counter-slide / break-apart bonds, interactive **20-Frame Counters**, and 29 collectible Dog Man & Supa Buddies companions.
    - Modes: **Supa Buddies Daily Mix**, **Teen Numbers & Friends of 10**, **Make a Ten to Add**, **Use a Ten to Subtract**, **Doubles & Near-Doubles**, **Fluency Within 10**, and **Fact Families & Balance**.
-6. **100-Chart Cross Puzzles** (1st Grade — `#/game/hundreds-chart`, assigned to `grade1`)
+7. **100-Chart Cross Puzzles** (1st Grade — `#/game/hundreds-chart`, assigned to `grade1`)
    - Built around i-Ready Grade 1 Lesson 14C (*"Finish the Puzzle"* — 100-chart & 120-chart cross cutouts) with a sunlit Sky theme, multi-box cross input with partial progress lock-in, interactive 1–100 / 1–120 chart peek with clue highlighting and cross spotlighting, and 29 collectible Dog Man & Supa Buddies Chart Detectives led by Cat Kid.
    - Modes: **Supa Chart Daily Mix**, **10 Less, 10 More & ±1 Hops**, **Center-Clue Crosses**, **Two-Clue Crosses (Find Middle!)**, **One-Clue Cross Detective**, **Chart Windows & Oops Detective**, and **Beyond 100: The 120-Chart!**.
 
@@ -40,7 +44,7 @@ Then open `http://localhost:8080/` in your browser. All paths are relative (`./c
 
 ## Kid Profiles & Legacy Save Migration
 
-- Default profiles: **3rd Grader** (`🐉`, `grade3` → *Factors & Multiples*, *Multiplication Facts*, *Money Match: Dragon Hoard Duel*, and *Shape, Perimeter & Area*) and **1st Grader** (`🐶`, `grade1` → *Addition & Subtraction* and *100-Chart Cross Puzzles*), stored under `localStorage['math_arcade_save_v1']`.
+- Default profiles: **3rd Grader** (`🐉`, `grade3` → *Factors & Multiples*, *Multiplication Facts*, *Money Match: Dragon Hoard Duel*, *Shape, Perimeter & Area*, and *Meow Training*) and **1st Grader** (`🐶`, `grade1` → *Addition & Subtraction* and *100-Chart Cross Puzzles*), stored under `localStorage['math_arcade_save_v1']`.
 - Automatic non-destructive migrations:
   - `localStorage['wings_of_math_save_v1']` migrates into `grade3`’s `factors-and-multiples` save.
   - Existing `math_arcade_save_v1` saves keyed under `primes-and-factors` migrate automatically into `factors-and-multiples`.
